@@ -2,12 +2,14 @@ package glog
 
 import (
 	"context"
-	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"strings"
 	"sync"
 )
+
+var DefaultLogLevel = Info
 
 // BaseLogger implements both Logger and LoggerProvider interfaces
 type BaseLogger struct {
@@ -19,6 +21,7 @@ type BaseLogger struct {
 	ctx      context.Context
 	focused  bool
 	focusMap map[string]bool
+	stdout   io.Writer
 
 	level      string
 	addSource  bool
@@ -33,10 +36,11 @@ func Argument[T any](key string, value T) any {
 func NewLogger(options ...Option) *BaseLogger {
 	c := &BaseLogger{
 		ctx:       context.Background(),
-		level:     "INFO",
+		level:     DefaultLogLevel,
 		addSource: true,
 		loggers:   map[string]*BaseLogger{},
 		focusMap:  map[string]bool{},
+		stdout:    os.Stdout,
 	}
 
 	for _, option := range options {
@@ -132,6 +136,7 @@ func (c *BaseLogger) isFocused() bool {
 	if !root.focused {
 		return true
 	}
+
 	return root.focusMap[c.name]
 }
 
@@ -145,6 +150,7 @@ func (c *BaseLogger) GetLogger(name string) *BaseLogger {
 	}
 
 	out := NewLogger()
+	out.root = root
 	out.name = name
 	out.level = c.level
 	out.addSource = c.addSource
@@ -171,10 +177,6 @@ func (c *BaseLogger) Info(msg string, args ...any) {
 
 func (c *BaseLogger) Warn(msg string, args ...any) {
 	c.logger.Log(c.ctx, slog.LevelWarn, msg, args...)
-}
-
-func (c *BaseLogger) Success(msg string, args ...any) {
-	c.logger.Log(c.ctx, LevelSuccess, msg, args...)
 }
 
 func (c *BaseLogger) Error(msg string, args ...any) {
@@ -210,14 +212,13 @@ func (c *BaseLogger) configureLogger() {
 
 	switch c.loggerType {
 	case LoggerTypeConsole:
-		handler = slog.NewTextHandler(os.Stdout, c.opts)
+		handler = slog.NewTextHandler(c.stdout, c.opts)
 	case LoggerTypePretty:
-		fmt.Println("===== use pretty logger!")
-		handler = NewColorConsoleHandler(os.Stdout, c.opts)
+		handler = NewColorConsoleHandler(c.stdout, c.opts)
 	case LoggerTypeJSON:
-		handler = slog.NewJSONHandler(os.Stdout, c.opts)
+		handler = slog.NewJSONHandler(c.stdout, c.opts)
 	default:
-		handler = slog.NewJSONHandler(os.Stdout, c.opts)
+		handler = slog.NewJSONHandler(c.stdout, c.opts)
 	}
 
 	handler = NewFocusFilterHandler(handler, c)
@@ -273,8 +274,6 @@ func getLevel(l string) slog.Level {
 	switch strings.ToUpper(l) {
 	case "ERROR":
 		return slog.LevelError
-	case "SUCCESS":
-		return LevelSuccess
 	case "WARN":
 		return slog.LevelWarn
 	case "INFO":
