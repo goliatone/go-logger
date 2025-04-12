@@ -14,6 +14,12 @@ import (
 
 var ColorConsoleTSFormat = "2006-01-02 15:04:05.000"
 
+var (
+	maxDisplayNameLenMu sync.Mutex
+	maxDisplayNameLen   = 6
+	maxAllowedNameLen   = 15
+)
+
 type ColorConsoleOption func(*ColorConsoleHandler)
 
 func WithColorConsoleTSFormat(format string) ColorConsoleOption {
@@ -97,8 +103,7 @@ func (h *ColorConsoleHandler) Handle(ctx context.Context, r slog.Record) error {
 
 	var loggerInfo string
 	if loggerName, ok := attrMap["logger"].(string); ok {
-		loggerName = "[" + loggerName + "]"
-		loggerInfo = color.New(color.FgGreen, color.Bold).Sprintf("%6s", loggerName)
+		loggerInfo = h.formatLoggerName(loggerName)
 		delete(attrMap, "logger") // remove key from attributes to avoid duplication
 	}
 
@@ -130,6 +135,39 @@ func (h *ColorConsoleHandler) Handle(ctx context.Context, r slog.Record) error {
 	return nil
 }
 
+func (h *ColorConsoleHandler) updateMaxNameLen(name string) {
+	effectiveLen := len(name)
+	if effectiveLen > maxAllowedNameLen {
+		effectiveLen = maxAllowedNameLen
+	}
+	maxDisplayNameLenMu.Lock()
+	defer maxDisplayNameLenMu.Unlock()
+
+	if effectiveLen > maxDisplayNameLen {
+		maxDisplayNameLen = effectiveLen
+	}
+}
+
+func (h *ColorConsoleHandler) formatLoggerName(name string) string {
+	h.updateMaxNameLen(name)
+
+	dislayName := name
+	if len(name) > maxAllowedNameLen {
+		dislayName = name[:maxAllowedNameLen-3] + "..."
+	}
+
+	withBrackets := "[" + dislayName + "]"
+
+	maxDisplayNameLenMu.Lock()
+	currentMaxLen := maxDisplayNameLen
+	maxDisplayNameLenMu.Unlock()
+
+	// create dyanmic template for display len
+	formatStr := fmt.Sprintf("%%%ds", currentMaxLen+2)
+
+	return color.New(color.FgGreen, color.Bold).Sprintf(formatStr, withBrackets)
+}
+
 // WithAttrs implements slog.Handler.
 func (h *ColorConsoleHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	h2 := *h
@@ -155,7 +193,7 @@ func (h *ColorConsoleHandler) colorizeLevel(level slog.Level) string {
 
 	// Make it uppercase and pad it for alignment
 	levelName = strings.ToUpper(levelName)
-	levelName = fmt.Sprintf("%-5s", levelName)
+	levelName = fmt.Sprintf("%-6s", levelName)
 
 	// Apply color based on level
 	switch {
@@ -182,7 +220,6 @@ func (h *ColorConsoleHandler) formatAttrs(attrs map[string]any) string {
 
 	var parts []string
 	for k, v := range attrs {
-		// Format the key-value pair
 		key := color.New(color.FgHiYellow).Sprint(k)
 		val := fmt.Sprintf("%v", v)
 		parts = append(parts, fmt.Sprintf(" %s=%s", key, val))
