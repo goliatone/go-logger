@@ -10,9 +10,6 @@ export LGR_NO_TIMESTAMP=true
 VERSION_FILE="./.version"
 
 # If we have a .taskenv file load it as source
-# the file should be e.g.
-# #!/bin/bash
-# export DATABASE_URL="..."
 if [ -f .taskenv ]; then
     # shellcheck disable=SC1091
     source .taskenv
@@ -90,6 +87,10 @@ function dev:install {
 
 function dev:env:load {
     eval "$(envset development --isolated=true)"
+}
+
+function dev:test {
+    lgr exec -- go test -v ./...
 }
 
 ##
@@ -270,12 +271,8 @@ function release {
     # Fetch all changes from origin
     git fetch --all
 
-    if [ -f ".version" ]; then
-        # Make sure we have the latest version file
-        git checkout origin/main -- ".version"
-    else
-        lgr I "File .version does not exist. Skipping."
-    fi
+    # Make sure we have the latest version file
+    git checkout origin/main -- ".version"
 
     # Pull tags to make sure we have
     git pull --tags -f
