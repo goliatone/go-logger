@@ -113,10 +113,12 @@ func (h *ColorConsoleHandler) Handle(ctx context.Context, r slog.Record) error {
 		delete(attrMap, "source")
 	}
 
-	// var errorInfo string
-	// if err, ok := attrMap["error"]; ok {
-	// 	////
-	// }
+	var stackInfo string
+	if err, ok := attrMap["stack"]; ok {
+		stackInfo = color.New(color.FgHiBlack).Sprintf("%s", err)
+		delete(attrMap, "stack")
+
+	}
 
 	delete(attrMap, "ts")
 	delete(attrMap, "time")
@@ -136,6 +138,10 @@ func (h *ColorConsoleHandler) Handle(ctx context.Context, r slog.Record) error {
 		formattedAttrs,
 		sourceInfo,
 	)
+
+	if stackInfo != "" {
+		fmt.Fprintf(h.out, "%s", stackInfo)
+	}
 
 	return nil
 }
