@@ -229,9 +229,14 @@ func (h *ColorConsoleHandler) formatAttrs(attrs map[string]any) string {
 		return ""
 	}
 
+	var key string
 	var parts []string
 	for k, v := range attrs {
-		key := color.New(color.FgHiYellow).Sprint(k)
+		if k == "error" {
+			key = color.New(color.FgHiRed).Sprint("message")
+		} else {
+			key = color.New(color.FgHiYellow).Sprint(k)
+		}
 		val := fmt.Sprintf("%v", v)
 		parts = append(parts, fmt.Sprintf(" %s=%s", key, val))
 	}
