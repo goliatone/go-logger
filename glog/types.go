@@ -5,12 +5,17 @@ import (
 	"log/slog"
 )
 
+type coder interface {
+	Code() string
+}
+
 type Logger interface {
 	Trace(msg string, args ...any)
 	Debug(msg string, args ...any)
 	Info(msg string, args ...any)
 	Warn(msg string, args ...any)
 	Error(msg string, args ...any)
+	Fatal(msg string, args ...any)
 	WithContext(ctx context.Context) Logger
 }
 
@@ -20,19 +25,21 @@ type LoggerProvider interface {
 
 const (
 	LevelTrace = slog.Level(-8)
+	LevelFatal = slog.Level(20)
 )
 
 const (
-	Error   = "ERROR"
-	Success = "SUCCESS"
-	Warn    = "WARN"
-	Info    = "INFO"
-	Debug   = "DEBUG"
-	Trace   = "TRACE"
+	Trace = "TRACE"
+	Debug = "DEBUG"
+	Info  = "INFO"
+	Warn  = "WARN"
+	Error = "ERROR"
+	Fatal = "FATAL"
 )
 
 var CustomLevels = map[slog.Leveler]string{
 	LevelTrace: Trace,
+	LevelFatal: Fatal,
 }
 
 const (
