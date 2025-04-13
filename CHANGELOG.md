@@ -1,5 +1,29 @@
 # Changelog
 
+# [0.1.1](https://github.com/goliatone/go-logger/compare/v0.1.0...v0.1.1) - (2025-04-13)
+
+## <!-- 13 -->📦 Bumps
+
+- Bump version: v0.1.1 ([f4ef7d5](https://github.com/goliatone/go-logger/commit/f4ef7d51d6d36a110c8e24cd7e6c72875a8c6ad7))  - (goliatone)
+
+## <!-- 16 -->➕ Add
+
+- Message key ([0680346](https://github.com/goliatone/go-logger/commit/0680346dce97d67b9a38df14e79592a577dc7b55))  - (goliatone)
+- Fatal supports getting exit code from err.Code() ([f516a56](https://github.com/goliatone/go-logger/commit/f516a5671c231381f95f40e4004174d4dde78be0))  - (goliatone)
+- Support for code and status in errors ([79a1033](https://github.com/goliatone/go-logger/commit/79a10337fce5dce171593583f59bc09c6291163b))  - (goliatone)
+- More info to Error ([10a2f00](https://github.com/goliatone/go-logger/commit/10a2f003c82441876d8e3803de98a196755ea920))  - (goliatone)
+- New levels ([66d9e5a](https://github.com/goliatone/go-logger/commit/66d9e5a3ce6347dc23b23e148215103a682486d7))  - (goliatone)
+- Args helper ([aa5467a](https://github.com/goliatone/go-logger/commit/aa5467a95246d12c8ac480be8078c8c8946b3700))  - (goliatone)
+- Taskfile handle release with latest .version ([40781af](https://github.com/goliatone/go-logger/commit/40781af43c580a155e3662969c580e74ad672eee))  - (goliatone)
+
+## <!-- 22 -->🚧 WIP
+
+- Support statck info in errors ([fe2aa9f](https://github.com/goliatone/go-logger/commit/fe2aa9f07aa6ea36c363db6762d55f2eb3704e73))  - (goliatone)
+
+## <!-- 3 -->📚 Documentation
+
+- Update changelog for v0.1.0 ([97c1b7c](https://github.com/goliatone/go-logger/commit/97c1b7cf12f8d73b66f5e9c62dcb2d170df81f42))  - (goliatone)
+
 # [0.1.0](https://github.com/goliatone/go-logger/tree/v0.1.0) - (2025-04-12)
 
 ## <!-- 1 -->🐛 Bug Fixes
