@@ -2,9 +2,12 @@ package glog
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -29,8 +32,12 @@ type BaseLogger struct {
 	name       string
 }
 
-func Argument[T any](key string, value T) any {
+func Arg(key string, value any) any {
 	return slog.Any(key, value)
+}
+
+func Args(args ...any) any {
+	return argsToAttrSlice(args)
 }
 
 func NewLogger(options ...Option) *BaseLogger {
@@ -163,6 +170,16 @@ func (c *BaseLogger) GetLogger(name string) *BaseLogger {
 	return out
 }
 
+// With returns a Logger that includes the given attributes
+// in each subsequent log output.
+func (c *BaseLogger) With(args ...any) *BaseLogger {
+	if len(args) == 0 {
+		return c
+	}
+	c.logger = c.logger.With(argsToAttrSlice(args)...)
+	return c
+}
+
 func (c *BaseLogger) Trace(msg string, args ...any) {
 	c.logger.Log(c.ctx, LevelTrace, msg, args...)
 }
@@ -180,7 +197,65 @@ func (c *BaseLogger) Warn(msg string, args ...any) {
 }
 
 func (c *BaseLogger) Error(msg string, args ...any) {
-	c.logger.Log(c.ctx, slog.LevelError, msg, args...)
+	err, nargs := findError(args)
+	if err == nil {
+		c.logger.Log(c.ctx, slog.LevelError, msg, nargs...)
+		return
+	}
+
+	dargs := nargs
+
+	if ce, ok := err.(coder); ok {
+		dargs = append(dargs, slog.Any("error_code", ce.Code()))
+	}
+
+	root := err
+	for {
+		unwrapped := errors.Unwrap(root)
+		if unwrapped == nil {
+			break
+		}
+		root = unwrapped
+	}
+
+	if root != err {
+		dargs = append(dargs, slog.Any("root_error", root))
+	}
+
+	dargs = append(dargs, slog.Any("error", err))
+
+	stack := getStackTrace(4)
+
+	dargs = append(dargs, slog.Any("stack", stack))
+
+	c.logger.Log(c.ctx, slog.LevelError, msg, dargs...)
+}
+
+func (c *BaseLogger) Fatal(msg string, args ...any) {
+	c.Error(msg, args...)
+	// NOTE: might need to come up with a way to flush any async logs, maybe
+	os.Exit(1)
+}
+
+func findError(args []any) (errFound error, remaining []any) {
+	remaining = make([]any, 0, len(args))
+
+	for i := 0; i < len(args); i++ {
+		if key, ok := args[i].(string); ok && key == "error" && i+1 < len(args) {
+			if errVal, ok := args[i+1].(error); ok && errVal != nil {
+				remaining = append(remaining, args[i], args[i+1])
+				i++
+				continue
+			}
+		}
+
+		if e, ok := args[i].(error); ok && e != nil && errFound == nil {
+			errFound = e
+			continue
+		}
+		remaining = append(remaining, args[i])
+	}
+	return errFound, remaining
 }
 
 func (c *BaseLogger) configureLogger() {
@@ -285,4 +360,22 @@ func getLevel(l string) slog.Level {
 	default:
 		return slog.LevelInfo
 	}
+}
+
+func getStackTrace(skip int) string {
+	const depth = 32
+	pcs := make([]uintptr, depth)
+	n := runtime.Callers(skip, pcs)
+	pcs = pcs[:n]
+	frames := runtime.CallersFrames(pcs)
+
+	var sb strings.Builder
+	for {
+		frame, more := frames.Next()
+		sb.WriteString(fmt.Sprintf("%s\n\t%s:%d\n", frame.Function, frame.File, frame.Line))
+		if !more {
+			break
+		}
+	}
+	return sb.String()
 }
