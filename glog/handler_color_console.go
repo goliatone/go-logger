@@ -17,7 +17,7 @@ var ColorConsoleTSFormat = "2006-01-02 15:04:05.000"
 var (
 	maxDisplayNameLenMu sync.Mutex
 	maxDisplayNameLen   = 6
-	maxAllowedNameLen   = 15
+	maxAllowedNameLen   = 12
 )
 
 type ColorConsoleOption func(*ColorConsoleHandler)
@@ -112,6 +112,11 @@ func (h *ColorConsoleHandler) Handle(ctx context.Context, r slog.Record) error {
 		sourceInfo = color.New(color.FgHiBlack).Sprintf("(%s)", source)
 		delete(attrMap, "source")
 	}
+
+	// var errorInfo string
+	// if err, ok := attrMap["error"]; ok {
+	// 	////
+	// }
 
 	delete(attrMap, "ts")
 	delete(attrMap, "time")

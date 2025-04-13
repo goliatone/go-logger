@@ -6,7 +6,11 @@ import (
 )
 
 type coder interface {
-	Code() string
+	Code() int
+}
+
+type statuser interface {
+	Status() string
 }
 
 type Logger interface {
