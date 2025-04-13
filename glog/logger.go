@@ -209,6 +209,10 @@ func (c *BaseLogger) Error(msg string, args ...any) {
 		dargs = append(dargs, slog.Any("error_code", ce.Code()))
 	}
 
+	if ce, ok := err.(statuser); ok {
+		dargs = append(dargs, slog.Any("status_code", ce.Status()))
+	}
+
 	root := err
 	for {
 		unwrapped := errors.Unwrap(root)
@@ -233,8 +237,16 @@ func (c *BaseLogger) Error(msg string, args ...any) {
 
 func (c *BaseLogger) Fatal(msg string, args ...any) {
 	c.Error(msg, args...)
+
+	code := 1
+	if err, _ := findError(args); err != nil {
+		if ce, ok := err.(coder); ok {
+			code = ce.Code()
+		}
+	}
+
 	// NOTE: might need to come up with a way to flush any async logs, maybe
-	os.Exit(1)
+	os.Exit(code)
 }
 
 func findError(args []any) (errFound error, remaining []any) {
