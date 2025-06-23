@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"slices"
+	"sort"
 	"strings"
 	"sync"
 
@@ -164,7 +165,7 @@ func (h *ColorConsoleHandler) formatLoggerName(name string) string {
 
 	dislayName := name
 	if len(name) > maxAllowedNameLen {
-		dislayName = name[:maxAllowedNameLen-3] + "..."
+		dislayName = "..." + name[maxAllowedNameLen-3:]
 	}
 
 	withBrackets := "[" + dislayName + "]"
@@ -229,16 +230,22 @@ func (h *ColorConsoleHandler) formatAttrs(attrs map[string]any) string {
 		return ""
 	}
 
-	var key string
+	var keys []string
+	for k := range attrs {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
 	var parts []string
-	for k, v := range attrs {
+	for _, k := range keys {
+		v := attrs[k]
+		var keyColored string
 		if k == "error" {
-			key = color.New(color.FgHiRed).Sprint("message")
+			keyColored = color.New(color.FgHiRed).Sprint("message")
 		} else {
-			key = color.New(color.FgHiYellow).Sprint(k)
+			keyColored = color.New(color.FgHiYellow).Sprint(k)
 		}
-		val := fmt.Sprintf("%v", v)
-		parts = append(parts, fmt.Sprintf(" %s=%s", key, val))
+		parts = append(parts, fmt.Sprintf(" %s=%v", keyColored, v))
 	}
 
 	return strings.Join(parts, "")
