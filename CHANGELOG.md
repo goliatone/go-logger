@@ -1,5 +1,20 @@
 # Changelog
 
+# [0.1.2](https://github.com/goliatone/go-logger/compare/v0.1.1...v0.1.2) - (2025-06-26)
+
+## <!-- 1 -->🐛 Bug Fixes
+
+- Output ([4268fea](https://github.com/goliatone/go-logger/commit/4268fea9129edaba580bec1531a81e65bf5b6353))  - (goliatone)
+- Cliff setup ([4577a39](https://github.com/goliatone/go-logger/commit/4577a39147d082a2b27906774e67b714d656af08))  - (goliatone)
+
+## <!-- 13 -->📦 Bumps
+
+- Bump version: v0.1.2 ([da7b483](https://github.com/goliatone/go-logger/commit/da7b4836c6e30661f1dfc271863fee24af520879))  - (goliatone)
+
+## <!-- 3 -->📚 Documentation
+
+- Update changelog for v0.1.1 ([cbb86b5](https://github.com/goliatone/go-logger/commit/cbb86b5d86703d834aeb883d96039900282cc5f2))  - (goliatone)
+
 # [0.1.1](https://github.com/goliatone/go-logger/compare/v0.1.0...v0.1.1) - (2025-04-13)
 
 ## <!-- 13 -->📦 Bumps
@@ -37,16 +52,12 @@
 ## <!-- 14 -->🎉 Initial Commit
 
 - Initial commit ([3f6a101](https://github.com/goliatone/go-logger/commit/3f6a10105401aca515be665876d35164f3c9ac24))  - (goliatone)
-- Initial commit ([ea3ddc2](https://github.com/goliatone/go-logger/commit/ea3ddc299f6fea99b7e481e0afe58b4bf609fab7))  - (goliatone)
 
 ## <!-- 16 -->➕ Add
 
 - Logger name formatting on output ([991afa2](https://github.com/goliatone/go-logger/commit/991afa2bbeefbb1896b64bb3e7f20756eb04f924))  - (goliatone)
 - Clean up interafce ([987f1a9](https://github.com/goliatone/go-logger/commit/987f1a9a669f7e83161bc340eb7eb394c1c6594f))  - (goliatone)
 - Initial type definition; ([2acf954](https://github.com/goliatone/go-logger/commit/2acf9543d05c674ed21178ceda8b597d6d5e22a1))  - (goliatone)
-- Initial type definition; ([7f83bb2](https://github.com/goliatone/go-logger/commit/7f83bb2e222785826a74ba2d321ffde56cbf0827))  - (goliatone)
-- Initial type definition; ([d9ef2ed](https://github.com/goliatone/go-logger/commit/d9ef2edb050290fdeb90bbb6adbda437e6a63ad5))  - (goliatone)
-- Initial type definition; ([e753c67](https://github.com/goliatone/go-logger/commit/e753c679200c2f07e7cae4ec3e10c3b5e57ef26b))  - (goliatone)
 
 ## <!-- 2 -->🚜 Refactor
 
