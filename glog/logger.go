@@ -2,7 +2,6 @@ package glog
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -10,9 +9,13 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+
+	"github.com/goliatone/go-errors"
 )
 
 var DefaultLogLevel = Info
+
+type RichErrorHandler func(err error) []slog.Attr
 
 // BaseLogger implements both Logger and LoggerProvider interfaces
 type BaseLogger struct {
@@ -30,6 +33,8 @@ type BaseLogger struct {
 	addSource  bool
 	loggerType string
 	name       string
+
+	richErrHandler RichErrorHandler
 }
 
 func Arg(key string, value any) any {
@@ -42,12 +47,13 @@ func Args(args ...any) any {
 
 func NewLogger(options ...Option) *BaseLogger {
 	c := &BaseLogger{
-		ctx:       context.Background(),
-		level:     DefaultLogLevel,
-		addSource: true,
-		loggers:   map[string]*BaseLogger{},
-		focusMap:  map[string]bool{},
-		stdout:    os.Stdout,
+		ctx:            context.Background(),
+		level:          DefaultLogLevel,
+		addSource:      true,
+		loggers:        map[string]*BaseLogger{},
+		focusMap:       map[string]bool{},
+		stdout:         os.Stdout,
+		richErrHandler: defaultErrHandler,
 	}
 
 	for _, option := range options {
@@ -205,12 +211,12 @@ func (c *BaseLogger) Error(msg string, args ...any) {
 
 	dargs := nargs
 
-	if ce, ok := err.(coder); ok {
-		dargs = append(dargs, slog.Any("error_code", ce.Code()))
-	}
-
-	if ce, ok := err.(statuser); ok {
-		dargs = append(dargs, slog.Any("status_code", ce.Status()))
+	if c.richErrHandler != nil {
+		if richAttrs := c.richErrHandler(err); richAttrs != nil {
+			for _, attr := range richAttrs {
+				dargs = append(dargs, attr)
+			}
+		}
 	}
 
 	root := err
@@ -390,4 +396,21 @@ func getStackTrace(skip int) string {
 		}
 	}
 	return sb.String()
+}
+
+func defaultErrHandler(err error) []slog.Attr {
+	var attrs []slog.Attr
+	if ce, ok := err.(coder); ok {
+		attrs = append(attrs, slog.Any("error_code", ce.Code()))
+	}
+
+	if ce, ok := err.(statuser); ok {
+		attrs = append(attrs, slog.Any("status_code", ce.Status()))
+	}
+
+	if len(attrs) == 0 {
+		return nil
+	}
+
+	return attrs
 }
