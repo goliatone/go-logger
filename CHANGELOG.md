@@ -1,5 +1,37 @@
 # Changelog
 
+# [0.2.0](https://github.com/goliatone/go-logger/compare/v0.1.2...v0.2.0) - (2025-07-10)
+
+## <!-- 1 -->🐛 Bug Fixes
+
+- How we handle rich output in console ([ee91ed2](https://github.com/goliatone/go-logger/commit/ee91ed2137c2128fa6f78b57b4f4ae8cea02c939))  - (goliatone)
+- Logger should make new copies ([ae86263](https://github.com/goliatone/go-logger/commit/ae86263274e4e99dfa011e46da3b8411d6499489))  - (goliatone)
+
+## <!-- 13 -->📦 Bumps
+
+- Bump version: v0.2.0 ([a8a930d](https://github.com/goliatone/go-logger/commit/a8a930d97888d062f3ac22f86526feba05d72fb3))  - (goliatone)
+
+## <!-- 16 -->➕ Add
+
+- Test for package ([dc77ce7](https://github.com/goliatone/go-logger/commit/dc77ce751b563523521f7c8d23921757bd284eaa))  - (goliatone)
+- RichErrorHandler to augment error log output ([459b3ce](https://github.com/goliatone/go-logger/commit/459b3ce9e262ddd14970a217a63a8c83094c9dca))  - (goliatone)
+
+## <!-- 2 -->🚜 Refactor
+
+- Enable testing by using mock osExit ([0d5f310](https://github.com/goliatone/go-logger/commit/0d5f310cdca8e216cfd8d40b55a2a3c640f4d207))  - (goliatone)
+
+## <!-- 3 -->📚 Documentation
+
+- Update changelog for v0.1.2 ([87a7861](https://github.com/goliatone/go-logger/commit/87a7861a61e2b31177988b1b0b731d4c4303645f))  - (goliatone)
+
+## <!-- 30 -->📝 Other
+
+- PR [#1](https://github.com/goliatone/go-logger/pull/1): rich error output ([6fe3a46](https://github.com/goliatone/go-logger/commit/6fe3a4667776113e8a5aa8a106bcf287956e2149))  - (goliatone)
+
+## <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Update deps ([34d6984](https://github.com/goliatone/go-logger/commit/34d6984da1658251279698069320633149f06491))  - (goliatone)
+
 # [0.1.2](https://github.com/goliatone/go-logger/compare/v0.1.1...v0.1.2) - (2025-06-26)
 
 ## <!-- 1 -->🐛 Bug Fixes
