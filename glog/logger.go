@@ -14,9 +14,14 @@ import (
 
 var DefaultLogLevel = Info
 
+// osExit is a mockable exit function.
+var osExit = os.Exit
+
+type RichErrorHandler func(err error) []slog.Attr
+
 // BaseLogger implements both Logger and LoggerProvider interfaces
 type BaseLogger struct {
-	mu       sync.RWMutex
+	mu       *sync.RWMutex
 	logger   *slog.Logger
 	root     *BaseLogger
 	loggers  map[string]*BaseLogger
@@ -30,6 +35,8 @@ type BaseLogger struct {
 	addSource  bool
 	loggerType string
 	name       string
+
+	richErrHandler RichErrorHandler
 }
 
 func Arg(key string, value any) any {
@@ -42,12 +49,14 @@ func Args(args ...any) any {
 
 func NewLogger(options ...Option) *BaseLogger {
 	c := &BaseLogger{
-		ctx:       context.Background(),
-		level:     DefaultLogLevel,
-		addSource: true,
-		loggers:   map[string]*BaseLogger{},
-		focusMap:  map[string]bool{},
-		stdout:    os.Stdout,
+		mu:             &sync.RWMutex{},
+		ctx:            context.Background(),
+		level:          DefaultLogLevel,
+		addSource:      true,
+		loggers:        map[string]*BaseLogger{},
+		focusMap:       map[string]bool{},
+		stdout:         os.Stdout,
+		richErrHandler: defaultErrHandler,
 	}
 
 	for _, option := range options {
@@ -85,6 +94,7 @@ func (c *BaseLogger) WithContext(ctx context.Context) Logger {
 		level:      c.level,
 		addSource:  c.addSource,
 		loggerType: c.loggerType,
+		mu:         c.mu, // we share the mutex pointer
 	}
 	return newLogger
 }
@@ -156,12 +166,19 @@ func (c *BaseLogger) GetLogger(name string) *BaseLogger {
 		return out
 	}
 
-	out := NewLogger()
-	out.root = root
-	out.name = name
-	out.level = c.level
-	out.addSource = c.addSource
-	out.loggerType = c.loggerType
+	out := &BaseLogger{
+		ctx:            c.ctx,
+		stdout:         c.stdout,
+		richErrHandler: c.richErrHandler,
+		loggers:        make(map[string]*BaseLogger),
+		focusMap:       make(map[string]bool),
+		root:           root,
+		name:           name,
+		level:          c.level,
+		addSource:      c.addSource,
+		loggerType:     c.loggerType,
+		mu:             root.mu, // we share the root mutex
+	}
 
 	out.configureLogger()
 
@@ -176,8 +193,10 @@ func (c *BaseLogger) With(args ...any) *BaseLogger {
 	if len(args) == 0 {
 		return c
 	}
-	c.logger = c.logger.With(argsToAttrSlice(args)...)
-	return c
+
+	c2 := *c
+	c2.logger = c.logger.With(argsToAttrSlice(args)...)
+	return &c2
 }
 
 func (c *BaseLogger) Trace(msg string, args ...any) {
@@ -205,12 +224,12 @@ func (c *BaseLogger) Error(msg string, args ...any) {
 
 	dargs := nargs
 
-	if ce, ok := err.(coder); ok {
-		dargs = append(dargs, slog.Any("error_code", ce.Code()))
-	}
-
-	if ce, ok := err.(statuser); ok {
-		dargs = append(dargs, slog.Any("status_code", ce.Status()))
+	if c.richErrHandler != nil {
+		if richAttrs := c.richErrHandler(err); richAttrs != nil {
+			for _, attr := range richAttrs {
+				dargs = append(dargs, attr)
+			}
+		}
 	}
 
 	root := err
@@ -228,7 +247,7 @@ func (c *BaseLogger) Error(msg string, args ...any) {
 
 	dargs = append(dargs, slog.Any("error", err))
 
-	stack := getStackTrace(4)
+	stack := getStackTrace(3)
 
 	dargs = append(dargs, slog.Any("stack", stack))
 
@@ -246,7 +265,7 @@ func (c *BaseLogger) Fatal(msg string, args ...any) {
 	}
 
 	// NOTE: might need to come up with a way to flush any async logs, maybe
-	os.Exit(code)
+	osExit(code)
 }
 
 func findError(args []any) (errFound error, remaining []any) {
@@ -390,4 +409,21 @@ func getStackTrace(skip int) string {
 		}
 	}
 	return sb.String()
+}
+
+func defaultErrHandler(err error) []slog.Attr {
+	var attrs []slog.Attr
+	if ce, ok := err.(coder); ok {
+		attrs = append(attrs, slog.Any("error_code", ce.Code()))
+	}
+
+	if ce, ok := err.(statuser); ok {
+		attrs = append(attrs, slog.Any("status_code", ce.Status()))
+	}
+
+	if len(attrs) == 0 {
+		return nil
+	}
+
+	return attrs
 }

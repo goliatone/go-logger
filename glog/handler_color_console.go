@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -109,10 +110,13 @@ func (h *ColorConsoleHandler) Handle(ctx context.Context, r slog.Record) error {
 	}
 
 	var sourceInfo string
-	if source, ok := attrMap["source"]; ok && h.opts.AddSource {
+	if h.opts.AddSource && r.PC != 0 {
+		fs := runtime.CallersFrames([]uintptr{r.PC})
+		f, _ := fs.Next()
+		source := fmt.Sprintf("%s:%d", f.File, f.Line)
 		sourceInfo = color.New(color.FgHiBlack).Sprintf("(%s)", source)
-		delete(attrMap, "source")
 	}
+	delete(attrMap, "source") // delete user provided source to avoid duplication
 
 	var stackInfo string
 	if err, ok := attrMap["stack"]; ok {
@@ -165,7 +169,7 @@ func (h *ColorConsoleHandler) formatLoggerName(name string) string {
 
 	dislayName := name
 	if len(name) > maxAllowedNameLen {
-		dislayName = "..." + name[maxAllowedNameLen-3:]
+		dislayName = "..." + name[len(name)-(maxAllowedNameLen-3):]
 	}
 
 	withBrackets := "[" + dislayName + "]"
