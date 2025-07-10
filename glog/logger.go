@@ -14,6 +14,9 @@ import (
 
 var DefaultLogLevel = Info
 
+// osExit is a mockable exit function.
+var osExit = os.Exit
+
 type RichErrorHandler func(err error) []slog.Attr
 
 // BaseLogger implements both Logger and LoggerProvider interfaces
@@ -262,7 +265,7 @@ func (c *BaseLogger) Fatal(msg string, args ...any) {
 	}
 
 	// NOTE: might need to come up with a way to flush any async logs, maybe
-	os.Exit(code)
+	osExit(code)
 }
 
 func findError(args []any) (errFound error, remaining []any) {
