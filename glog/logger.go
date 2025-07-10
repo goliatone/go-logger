@@ -18,7 +18,7 @@ type RichErrorHandler func(err error) []slog.Attr
 
 // BaseLogger implements both Logger and LoggerProvider interfaces
 type BaseLogger struct {
-	mu       sync.RWMutex
+	mu       *sync.RWMutex
 	logger   *slog.Logger
 	root     *BaseLogger
 	loggers  map[string]*BaseLogger
@@ -46,6 +46,7 @@ func Args(args ...any) any {
 
 func NewLogger(options ...Option) *BaseLogger {
 	c := &BaseLogger{
+		mu:             &sync.RWMutex{},
 		ctx:            context.Background(),
 		level:          DefaultLogLevel,
 		addSource:      true,
@@ -90,6 +91,7 @@ func (c *BaseLogger) WithContext(ctx context.Context) Logger {
 		level:      c.level,
 		addSource:  c.addSource,
 		loggerType: c.loggerType,
+		mu:         c.mu, // we share the mutex pointer
 	}
 	return newLogger
 }
@@ -161,12 +163,19 @@ func (c *BaseLogger) GetLogger(name string) *BaseLogger {
 		return out
 	}
 
-	out := NewLogger()
-	out.root = root
-	out.name = name
-	out.level = c.level
-	out.addSource = c.addSource
-	out.loggerType = c.loggerType
+	out := &BaseLogger{
+		ctx:            c.ctx,
+		stdout:         c.stdout,
+		richErrHandler: c.richErrHandler,
+		loggers:        make(map[string]*BaseLogger),
+		focusMap:       make(map[string]bool),
+		root:           root,
+		name:           name,
+		level:          c.level,
+		addSource:      c.addSource,
+		loggerType:     c.loggerType,
+		mu:             root.mu, // we share the root mutex
+	}
 
 	out.configureLogger()
 
@@ -181,8 +190,10 @@ func (c *BaseLogger) With(args ...any) *BaseLogger {
 	if len(args) == 0 {
 		return c
 	}
-	c.logger = c.logger.With(argsToAttrSlice(args)...)
-	return c
+
+	c2 := *c
+	c2.logger = c.logger.With(argsToAttrSlice(args)...)
+	return &c2
 }
 
 func (c *BaseLogger) Trace(msg string, args ...any) {
@@ -233,7 +244,7 @@ func (c *BaseLogger) Error(msg string, args ...any) {
 
 	dargs = append(dargs, slog.Any("error", err))
 
-	stack := getStackTrace(4)
+	stack := getStackTrace(3)
 
 	dargs = append(dargs, slog.Any("stack", stack))
 
