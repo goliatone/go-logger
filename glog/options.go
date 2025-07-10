@@ -45,3 +45,11 @@ func WithLoggerTypeJSON() Option {
 		bl.loggerType = LoggerTypeJSON
 	}
 }
+
+// WithRichErrorHandler sets a custom handler function to
+// extract attributes from errors
+func WithRichErrorHandler(handler RichErrorHandler) Option {
+	return func(bl *BaseLogger) {
+		bl.richErrHandler = handler
+	}
+}
