@@ -2,6 +2,7 @@ package glog
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -9,8 +10,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-
-	"github.com/goliatone/go-errors"
 )
 
 var DefaultLogLevel = Info
