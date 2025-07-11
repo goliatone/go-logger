@@ -110,13 +110,17 @@ func (h *ColorConsoleHandler) Handle(ctx context.Context, r slog.Record) error {
 	}
 
 	var sourceInfo string
-	if h.opts.AddSource && r.PC != 0 {
-		fs := runtime.CallersFrames([]uintptr{r.PC})
-		f, _ := fs.Next()
-		source := fmt.Sprintf("%s:%d", f.File, f.Line)
-		sourceInfo = color.New(color.FgHiBlack).Sprintf("(%s)", source)
+	if h.includeSourceInfo(r.Level) {
+		if r.PC != 0 {
+			fs := runtime.CallersFrames([]uintptr{r.PC})
+			f, _ := fs.Next()
+			if f.File != "" {
+				source := fmt.Sprintf("%s:%d", f.File, f.Line)
+				sourceInfo = color.New(color.FgHiBlack).Sprintf(" (%s)", source)
+			}
+		}
 	}
-	delete(attrMap, "source") // delete user provided source to avoid duplication
+	// delete(attrMap, "source")
 
 	var stackInfo string
 	if err, ok := attrMap["stack"]; ok {
@@ -198,6 +202,17 @@ func (h *ColorConsoleHandler) WithGroup(name string) slog.Handler {
 	return &h2
 }
 
+func (h *ColorConsoleHandler) includeSourceInfo(level slog.Level) bool {
+	switch level {
+	case slog.LevelError:
+		return true
+	case slog.LevelWarn:
+		return true
+	default:
+		return h.opts.AddSource
+	}
+}
+
 // colorizeLevel returns the level string with appropriate color
 func (h *ColorConsoleHandler) colorizeLevel(level slog.Level) string {
 	levelName := level.String()
@@ -212,16 +227,16 @@ func (h *ColorConsoleHandler) colorizeLevel(level slog.Level) string {
 	levelName = fmt.Sprintf("%-6s", levelName)
 
 	// Apply color based on level
-	switch {
-	case level == LevelTrace:
+	switch level {
+	case LevelTrace:
 		return color.New(color.FgHiBlack).Sprint(levelName)
-	case level == slog.LevelDebug:
+	case slog.LevelDebug:
 		return color.New(color.FgMagenta).Sprint(levelName)
-	case level == slog.LevelInfo:
+	case slog.LevelInfo:
 		return color.New(color.FgBlue).Sprint(levelName)
-	case level == slog.LevelWarn:
+	case slog.LevelWarn:
 		return color.New(color.FgYellow).Sprint(levelName)
-	case level == slog.LevelError:
+	case slog.LevelError:
 		return color.New(color.FgRed, color.Bold).Sprint(levelName)
 	default:
 		return levelName
