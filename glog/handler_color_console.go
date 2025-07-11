@@ -110,7 +110,10 @@ func (h *ColorConsoleHandler) Handle(ctx context.Context, r slog.Record) error {
 	}
 
 	var sourceInfo string
-	if h.includeSourceInfo(r.Level) {
+	if srcInf, ok := attrMap["source"].(string); ok {
+		sourceInfo = srcInf
+		delete(attrMap, "source")
+	} else if h.includeSourceInfo(r.Level) {
 		if r.PC != 0 {
 			fs := runtime.CallersFrames([]uintptr{r.PC})
 			f, _ := fs.Next()
@@ -120,7 +123,6 @@ func (h *ColorConsoleHandler) Handle(ctx context.Context, r slog.Record) error {
 			}
 		}
 	}
-	// delete(attrMap, "source") //TODO: take source optionally else do this
 
 	var stackInfo string
 	if err, ok := attrMap["stack"]; ok {
