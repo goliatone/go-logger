@@ -27,7 +27,7 @@ func TestNewLogger(t *testing.T) {
 
 		assert.NotNil(t, logger.logger)
 		assert.Equal(t, DefaultLogLevel, logger.level)
-		assert.Equal(t, true, logger.addSource)
+		assert.Equal(t, false, logger.addSource)
 		assert.Equal(t, "", logger.loggerType)
 		assert.Equal(t, logger, logger.root)
 	})
