@@ -10,6 +10,12 @@ func WithLevel(level string) Option {
 	}
 }
 
+func WithAddSource(add bool) Option {
+	return func(l *BaseLogger) {
+		l.addSource = add
+	}
+}
+
 func WithName(name string) Option {
 	return func(bl *BaseLogger) {
 		bl.name = name
