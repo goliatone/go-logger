@@ -1,5 +1,24 @@
 # Changelog
 
+# [0.3.0](https://github.com/goliatone/go-logger/compare/v0.2.0...v0.3.0) - (2025-07-11)
+
+## <!-- 1 -->🐛 Bug Fixes
+
+- Check level for adding source ([4d59988](https://github.com/goliatone/go-logger/commit/4d59988f2e652cd9dee8dedc68ce9c80f5ca593d))  - (goliatone)
+- Use custom log function to properly build stack source ([daff58e](https://github.com/goliatone/go-logger/commit/daff58ebba1a64c4ca2737ed2066f4a192050b53))  - (goliatone)
+
+## <!-- 13 -->📦 Bumps
+
+- Bump version: v0.3.0 ([2689730](https://github.com/goliatone/go-logger/commit/2689730bcf2c832cec9a84d07484469e735914fd))  - (goliatone)
+
+## <!-- 16 -->➕ Add
+
+- WithAddSource option ([1ce1ef7](https://github.com/goliatone/go-logger/commit/1ce1ef7dd9427c2d79523e4339431aa04b5461dc))  - (goliatone)
+
+## <!-- 3 -->📚 Documentation
+
+- Update changelog for v0.2.0 ([1f4d237](https://github.com/goliatone/go-logger/commit/1f4d23716ce70358d281a4599ace301c67f61c7a))  - (goliatone)
+
 # [0.2.0](https://github.com/goliatone/go-logger/compare/v0.1.2...v0.2.0) - (2025-07-10)
 
 ## <!-- 1 -->🐛 Bug Fixes
