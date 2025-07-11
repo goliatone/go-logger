@@ -120,7 +120,7 @@ func (h *ColorConsoleHandler) Handle(ctx context.Context, r slog.Record) error {
 			}
 		}
 	}
-	// delete(attrMap, "source")
+	// delete(attrMap, "source") //TODO: take source optionally else do this
 
 	var stackInfo string
 	if err, ok := attrMap["stack"]; ok {

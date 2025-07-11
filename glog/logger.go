@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 var DefaultLogLevel = Info
@@ -52,7 +53,7 @@ func NewLogger(options ...Option) *BaseLogger {
 		mu:             &sync.RWMutex{},
 		ctx:            context.Background(),
 		level:          DefaultLogLevel,
-		addSource:      true,
+		addSource:      false,
 		loggers:        map[string]*BaseLogger{},
 		focusMap:       map[string]bool{},
 		stdout:         os.Stdout,
@@ -200,25 +201,25 @@ func (c *BaseLogger) With(args ...any) *BaseLogger {
 }
 
 func (c *BaseLogger) Trace(msg string, args ...any) {
-	c.logger.Log(c.ctx, LevelTrace, msg, args...)
+	c.log(c.ctx, LevelTrace, msg, args...)
 }
 
 func (c *BaseLogger) Debug(msg string, args ...any) {
-	c.logger.Log(c.ctx, slog.LevelDebug, msg, args...)
+	c.log(c.ctx, slog.LevelDebug, msg, args...)
 }
 
 func (c *BaseLogger) Info(msg string, args ...any) {
-	c.logger.Log(c.ctx, slog.LevelInfo, msg, args...)
+	c.log(c.ctx, slog.LevelInfo, msg, args...)
 }
 
 func (c *BaseLogger) Warn(msg string, args ...any) {
-	c.logger.Log(c.ctx, slog.LevelWarn, msg, args...)
+	c.log(c.ctx, slog.LevelWarn, msg, args...)
 }
 
 func (c *BaseLogger) Error(msg string, args ...any) {
 	err, nargs := findError(args)
 	if err == nil {
-		c.logger.Log(c.ctx, slog.LevelError, msg, nargs...)
+		c.log(c.ctx, slog.LevelError, msg, nargs...)
 		return
 	}
 
@@ -251,10 +252,11 @@ func (c *BaseLogger) Error(msg string, args ...any) {
 
 	dargs = append(dargs, slog.Any("stack", stack))
 
-	c.logger.Log(c.ctx, slog.LevelError, msg, dargs...)
+	c.log(c.ctx, slog.LevelError, msg, dargs...)
 }
 
 func (c *BaseLogger) Fatal(msg string, args ...any) {
+	skipFrames = 4
 	c.Error(msg, args...)
 
 	code := 1
@@ -266,6 +268,28 @@ func (c *BaseLogger) Fatal(msg string, args ...any) {
 
 	// NOTE: might need to come up with a way to flush any async logs, maybe
 	osExit(code)
+}
+
+var skipFrames = 3
+
+// log is the low-level logging method that all other log methods call.
+// It's responsible for creating the slog.Record with the correct caller PC
+// and passing it to the handler. This bypasses slog.Logger.Log to avoid
+// capturing the call site within this package
+func (c *BaseLogger) log(ctx context.Context, level slog.Level, msg string, args ...any) {
+	if !c.logger.Enabled(ctx, level) {
+		return
+	}
+
+	var pc uintptr
+	var pcs [1]uintptr
+	runtime.Callers(skipFrames, pcs[:])
+	pc = pcs[0]
+
+	r := slog.NewRecord(time.Now(), level, msg, pc)
+	r.Add(args...)
+
+	_ = c.logger.Handler().Handle(ctx, r)
 }
 
 func findError(args []any) (errFound error, remaining []any) {
