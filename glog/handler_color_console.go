@@ -118,6 +118,7 @@ func (h *ColorConsoleHandler) Handle(ctx context.Context, r slog.Record) error {
 			fs := runtime.CallersFrames([]uintptr{r.PC})
 			f, _ := fs.Next()
 			if f.File != "" {
+				// source := fmt.Sprintf("%s:%d", f.Function, f.Line)
 				source := fmt.Sprintf("%s:%d", f.File, f.Line)
 				sourceInfo = color.New(color.FgHiBlack).Sprintf(" (%s)", source)
 			}
