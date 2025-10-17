@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 
@@ -180,6 +181,61 @@ func TestWith(t *testing.T) {
 	output = buf.String()
 	assert.NotContains(t, output, "user_id")
 	assert.Contains(t, output, `"msg":"system check"`)
+}
+
+func TestWithFieldsDeterministicOrdering(t *testing.T) {
+	var buf bytes.Buffer
+	logger := newTestLogger(&buf, WithLoggerTypeJSON())
+
+	fields := map[string]any{
+		"zeta":   3,
+		"alpha":  1,
+		"middle": 2,
+	}
+
+	logger.WithFields(fields).Info("with fields")
+
+	output := buf.String()
+	require.Contains(t, output, `"alpha":1`)
+	require.Contains(t, output, `"middle":2`)
+	require.Contains(t, output, `"zeta":3`)
+
+	idxAlpha := strings.Index(output, `"alpha":1`)
+	idxMiddle := strings.Index(output, `"middle":2`)
+	idxZeta := strings.Index(output, `"zeta":3`)
+	assert.True(t, idxAlpha < idxMiddle && idxMiddle < idxZeta, "fields should be sorted alphabetically")
+
+	buf.Reset()
+	shuffled := map[string]any{
+		"middle": 2,
+		"zeta":   3,
+		"alpha":  1,
+	}
+	logger.WithFields(shuffled).Info("with fields again")
+
+	output = buf.String()
+	require.Contains(t, output, `"alpha":1`)
+	require.Contains(t, output, `"middle":2`)
+	require.Contains(t, output, `"zeta":3`)
+
+	idxAlpha = strings.Index(output, `"alpha":1`)
+	idxMiddle = strings.Index(output, `"middle":2`)
+	idxZeta = strings.Index(output, `"zeta":3`)
+	assert.True(t, idxAlpha < idxMiddle && idxMiddle < idxZeta, "fields should retain sorted order across calls")
+}
+
+func TestWithFieldsComposition(t *testing.T) {
+	var buf bytes.Buffer
+	logger := newTestLogger(&buf, WithLoggerTypeJSON())
+
+	logger.With("user_id", 123).
+		WithFields(map[string]any{"request_id": "abc-123"}).
+		Info("user action")
+
+	output := buf.String()
+	assert.Contains(t, output, `"user_id":123`)
+	assert.Contains(t, output, `"request_id":"abc-123"`)
+	assert.Contains(t, output, `"msg":"user action"`)
 }
 
 func TestFocusAndUnfocus(t *testing.T) {
