@@ -162,6 +162,21 @@ requestLog.Info("Processing started")
 requestLog.Info("Processing completed")
 ```
 
+### Optional Structured Fields
+
+Loggers that implement `glog.FieldsLogger` allow you to attach a map of fields in a single call while keeping the base `Logger` interface minimal:
+
+```go
+if fl, ok := log.(glog.FieldsLogger); ok {
+    log = fl.WithFields(map[string]any{
+        "request_id": reqID,
+        "customer_id": customerID,
+    })
+}
+
+log.Info("Request received")
+```
+
 ## Error Handling
 
 The logger provides enhanced error handling with automatic stack trace capture:
