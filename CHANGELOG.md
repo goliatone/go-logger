@@ -1,5 +1,25 @@
 # Changelog
 
+# [unreleased]
+
+## <!-- 16 -->➕ Add
+
+- WithFields method ([15e94a4](https://github.com/goliatone/go-logger/commit/15e94a454d9c223e07925f9837f70e910d631fa4))  - (goliatone)
+- Handle case we send source in attr map ([1fa74ec](https://github.com/goliatone/go-logger/commit/1fa74ec41b461893dcfc76cf3759221931a03afc))  - (goliatone)
+
+## <!-- 22 -->🚧 WIP
+
+- Line output ([23b6a32](https://github.com/goliatone/go-logger/commit/23b6a329e58b9263e6a64e8344ed79382f8f9a43))  - (goliatone)
+
+## <!-- 3 -->📚 Documentation
+
+- Update changelog for v0.3.0 ([d5499cd](https://github.com/goliatone/go-logger/commit/d5499cd0c733e40b5aeb1b63a3394eadeaff87e8))  - (goliatone)
+
+## <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Update release task ([006f62a](https://github.com/goliatone/go-logger/commit/006f62a270da4cf28fdd6deb8ad379d2483b19ea))  - (goliatone)
+- Update readme ([5b085d4](https://github.com/goliatone/go-logger/commit/5b085d4bff643a5f6bf0895ee1d4a949b2795124))  - (goliatone)
+
 # [0.3.0](https://github.com/goliatone/go-logger/compare/v0.2.0...v0.3.0) - (2025-07-11)
 
 ## <!-- 1 -->🐛 Bug Fixes
