@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -198,6 +199,26 @@ func (c *BaseLogger) With(args ...any) *BaseLogger {
 	c2 := *c
 	c2.logger = c.logger.With(argsToAttrSlice(args)...)
 	return &c2
+}
+
+// WithFields returns a logger that includes the given structured fields.
+func (c *BaseLogger) WithFields(fields map[string]any) Logger {
+	if len(fields) == 0 {
+		return c
+	}
+
+	keys := make([]string, 0, len(fields))
+	for k := range fields {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	args := make([]any, 0, len(keys)*2)
+	for _, k := range keys {
+		args = append(args, k, fields[k])
+	}
+
+	return c.With(args...)
 }
 
 func (c *BaseLogger) Trace(msg string, args ...any) {
