@@ -27,6 +27,11 @@ type LoggerProvider interface {
 	GetLogger(name string) Logger
 }
 
+// FieldsLogger is an optional extension for attaching structured fields.
+type FieldsLogger interface {
+	WithFields(map[string]any) Logger
+}
+
 const (
 	LevelTrace = slog.Level(-8)
 	LevelFatal = slog.Level(20)
