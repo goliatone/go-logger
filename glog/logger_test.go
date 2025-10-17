@@ -224,6 +224,20 @@ func TestWithFieldsDeterministicOrdering(t *testing.T) {
 	assert.True(t, idxAlpha < idxMiddle && idxMiddle < idxZeta, "fields should retain sorted order across calls")
 }
 
+func TestWithFieldsEmptyMap(t *testing.T) {
+	var buf bytes.Buffer
+	logger := newTestLogger(&buf, WithLoggerTypeJSON())
+
+	out := logger.WithFields(nil)
+	require.IsType(t, (*BaseLogger)(nil), out)
+	assert.Same(t, logger, out.(*BaseLogger))
+
+	empty := map[string]any{}
+	out = logger.WithFields(empty)
+	require.IsType(t, (*BaseLogger)(nil), out)
+	assert.Same(t, logger, out.(*BaseLogger))
+}
+
 func TestWithFieldsComposition(t *testing.T) {
 	var buf bytes.Buffer
 	logger := newTestLogger(&buf, WithLoggerTypeJSON())

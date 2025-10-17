@@ -41,6 +41,8 @@ type BaseLogger struct {
 	richErrHandler RichErrorHandler
 }
 
+var _ FieldsLogger = (*BaseLogger)(nil)
+
 func Arg(key string, value any) any {
 	return slog.Any(key, value)
 }
