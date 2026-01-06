@@ -2,6 +2,25 @@
 
 # [unreleased]
 
+## <!-- 1 -->🐛 Bug Fixes
+
+- Guard Enabled for nil level, apply ReplaceAttr ([7113805](https://github.com/goliatone/go-logger/commit/7113805e97806e43c41dc24d861cfa9e7540b658))  - (goliatone)
+- Propagate missing stdout, handlerWrapper tec from logger ([cfae71a](https://github.com/goliatone/go-logger/commit/cfae71a6aadd5f742e2914f084e1076bbcc24b5d))  - (goliatone)
+
+## <!-- 2 -->🚜 Refactor
+
+- Error logging into errorWithSkip ([94f281a](https://github.com/goliatone/go-logger/commit/94f281aec5ddc26355c166b7682dee9d4f8ab4a4))  - (goliatone)
+
+## <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Update tests ([eb1159e](https://github.com/goliatone/go-logger/commit/eb1159e09eee6c9f15feaa83b68412a2ad9ee227))  - (goliatone)
+
+# [0.5.0](https://github.com/goliatone/go-logger/compare/v0.4.1...v0.5.0) - (2026-01-06)
+
+## <!-- 12 -->🔖 Releases
+
+- V0.5.0 ([1853856](https://github.com/goliatone/go-logger/commit/1853856e3350508a58aaf4df81c47b9d0dacaae1))  - (goliatone)
+
 ## <!-- 16 -->➕ Add
 
 - BaseLogger has a handlerWrapper ([d4ca239](https://github.com/goliatone/go-logger/commit/d4ca239aa348a454c47f353c8aa987652f3a79a2))  - (goliatone)
