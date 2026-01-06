@@ -245,9 +245,55 @@ func (c *BaseLogger) Warn(msg string, args ...any) {
 }
 
 func (c *BaseLogger) Error(msg string, args ...any) {
+	c.errorWithSkip(msg, defaultSkipFrames, args...)
+}
+
+func (c *BaseLogger) Fatal(msg string, args ...any) {
+	c.errorWithSkip(msg, defaultSkipFrames, args...)
+
+	code := 1
+	if err, _ := findError(args); err != nil {
+		if ce, ok := err.(coder); ok {
+			code = ce.Code()
+		}
+	}
+
+	// NOTE: might need to come up with a way to flush any async logs, maybe
+	osExit(code)
+}
+
+const (
+	defaultSkipFrames = 4
+)
+
+// log is the low-level logging method that all other log methods call.
+// It's responsible for creating the slog.Record with the correct caller PC
+// and passing it to the handler. This bypasses slog.Logger.Log to avoid
+// capturing the call site within this package
+func (c *BaseLogger) log(ctx context.Context, level slog.Level, msg string, args ...any) {
+	c.logWithSkip(ctx, level, msg, defaultSkipFrames, args...)
+}
+
+func (c *BaseLogger) logWithSkip(ctx context.Context, level slog.Level, msg string, skip int, args ...any) {
+	if !c.logger.Enabled(ctx, level) {
+		return
+	}
+
+	var pc uintptr
+	var pcs [1]uintptr
+	runtime.Callers(skip, pcs[:])
+	pc = pcs[0]
+
+	r := slog.NewRecord(time.Now(), level, msg, pc)
+	r.Add(args...)
+
+	_ = c.logger.Handler().Handle(ctx, r)
+}
+
+func (c *BaseLogger) errorWithSkip(msg string, skip int, args ...any) {
 	err, nargs := findError(args)
 	if err == nil {
-		c.log(c.ctx, slog.LevelError, msg, nargs...)
+		c.logWithSkip(c.ctx, slog.LevelError, msg, skip, nargs...)
 		return
 	}
 
@@ -276,48 +322,11 @@ func (c *BaseLogger) Error(msg string, args ...any) {
 
 	dargs = append(dargs, slog.Any("error", err))
 
-	stack := getStackTrace(3)
+	stack := getStackTrace(skip)
 
 	dargs = append(dargs, slog.Any("stack", stack))
 
-	c.log(c.ctx, slog.LevelError, msg, dargs...)
-}
-
-func (c *BaseLogger) Fatal(msg string, args ...any) {
-	skipFrames = 4
-	c.Error(msg, args...)
-
-	code := 1
-	if err, _ := findError(args); err != nil {
-		if ce, ok := err.(coder); ok {
-			code = ce.Code()
-		}
-	}
-
-	// NOTE: might need to come up with a way to flush any async logs, maybe
-	osExit(code)
-}
-
-var skipFrames = 3
-
-// log is the low-level logging method that all other log methods call.
-// It's responsible for creating the slog.Record with the correct caller PC
-// and passing it to the handler. This bypasses slog.Logger.Log to avoid
-// capturing the call site within this package
-func (c *BaseLogger) log(ctx context.Context, level slog.Level, msg string, args ...any) {
-	if !c.logger.Enabled(ctx, level) {
-		return
-	}
-
-	var pc uintptr
-	var pcs [1]uintptr
-	runtime.Callers(skipFrames, pcs[:])
-	pc = pcs[0]
-
-	r := slog.NewRecord(time.Now(), level, msg, pc)
-	r.Add(args...)
-
-	_ = c.logger.Handler().Handle(ctx, r)
+	c.logWithSkip(c.ctx, slog.LevelError, msg, skip, dargs...)
 }
 
 func findError(args []any) (errFound error, remaining []any) {
@@ -326,6 +335,11 @@ func findError(args []any) (errFound error, remaining []any) {
 	for i := 0; i < len(args); i++ {
 		if key, ok := args[i].(string); ok && key == "error" && i+1 < len(args) {
 			if errVal, ok := args[i+1].(error); ok && errVal != nil {
+				if errFound == nil {
+					errFound = errVal
+					i++
+					continue
+				}
 				remaining = append(remaining, args[i], args[i+1])
 				i++
 				continue
