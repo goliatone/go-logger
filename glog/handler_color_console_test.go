@@ -92,6 +92,43 @@ func TestColorConsoleHandler_LoggerNameFormatting(t *testing.T) {
 	assert.Regexp(t, regexp.MustCompile(`\[\.\.\.vice-name\]\s+`), output3)
 }
 
+func TestColorConsoleHandler_DefaultLevel(t *testing.T) {
+	var buf bytes.Buffer
+	handler := NewColorConsoleHandler(&buf, &slog.HandlerOptions{})
+	cch := handler.(*ColorConsoleHandler)
+
+	assert.True(t, cch.Enabled(context.Background(), slog.LevelInfo))
+	assert.False(t, cch.Enabled(context.Background(), slog.LevelDebug))
+}
+
+func TestColorConsoleHandler_ReplaceAttrWithAttrs(t *testing.T) {
+	var buf bytes.Buffer
+	opts := &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == "secret" {
+				return slog.Attr{}
+			}
+			return a
+		},
+	}
+
+	handler := NewColorConsoleHandler(&buf, opts)
+	handler = handler.WithAttrs([]slog.Attr{
+		slog.String("secret", "shh"),
+		slog.String("visible", "ok"),
+	})
+
+	logger := slog.New(handler)
+	logger.Info("hello")
+
+	output := buf.String()
+	uncolored := regexp.MustCompile(`\x1b\[[0-9;]*m`).ReplaceAllString(output, "")
+
+	assert.Contains(t, uncolored, "visible=ok")
+	assert.NotContains(t, uncolored, "secret")
+}
+
 func TestColorizeLevel(t *testing.T) {
 	handler := &ColorConsoleHandler{}
 

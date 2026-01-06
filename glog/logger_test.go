@@ -124,6 +124,16 @@ func TestWithErrorLogging(t *testing.T) {
 	assert.Contains(t, output, `"root_error":"base error"`)
 	assert.Contains(t, output, `"stack":`)
 	assert.Contains(t, output, `glog.TestWithErrorLogging`)
+
+	buf.Reset()
+	logger.Error("something bad happened", "error", wrappedErr)
+
+	output = buf.String()
+	assert.Contains(t, output, `"msg":"something bad happened"`)
+	assert.Contains(t, output, `"error":"wrapped: base error"`)
+	assert.Contains(t, output, `"root_error":"base error"`)
+	assert.Contains(t, output, `"stack":`)
+	assert.Contains(t, output, `glog.TestWithErrorLogging`)
 }
 
 type customError struct {
@@ -352,8 +362,8 @@ func TestFindError(t *testing.T) {
 		{
 			name:        "error is in key-value pair",
 			args:        []any{"request_id", "123", "error", errSample},
-			expectedErr: nil,
-			expectedRem: []any{"request_id", "123", "error", errSample},
+			expectedErr: errSample,
+			expectedRem: []any{"request_id", "123"},
 			shouldMatch: true,
 		},
 		{
