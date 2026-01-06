@@ -32,6 +32,7 @@ type BaseLogger struct {
 	focused  bool
 	focusMap map[string]bool
 	stdout   io.Writer
+	handlerWrapper func(slog.Handler) slog.Handler
 
 	level      string
 	addSource  bool
@@ -173,6 +174,7 @@ func (c *BaseLogger) GetLogger(name string) *BaseLogger {
 	out := &BaseLogger{
 		ctx:            c.ctx,
 		stdout:         c.stdout,
+		handlerWrapper: c.handlerWrapper,
 		richErrHandler: c.richErrHandler,
 		loggers:        make(map[string]*BaseLogger),
 		focusMap:       make(map[string]bool),
@@ -372,6 +374,10 @@ func (c *BaseLogger) configureLogger() {
 		handler = slog.NewJSONHandler(c.stdout, c.opts)
 	default:
 		handler = slog.NewJSONHandler(c.stdout, c.opts)
+	}
+
+	if c.handlerWrapper != nil {
+		handler = c.handlerWrapper(handler)
 	}
 
 	handler = NewFocusFilterHandler(handler, c)
