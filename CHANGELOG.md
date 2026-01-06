@@ -6,6 +6,8 @@
 
 - WithFields method ([15e94a4](https://github.com/goliatone/go-logger/commit/15e94a454d9c223e07925f9837f70e910d631fa4))  - (goliatone)
 - Handle case we send source in attr map ([1fa74ec](https://github.com/goliatone/go-logger/commit/1fa74ec41b461893dcfc76cf3759221931a03afc))  - (goliatone)
+- Handler wrapper option for custom slog handler wrapping.
+- Writer override option for custom output targets.
 
 ## <!-- 22 -->🚧 WIP
 
@@ -14,6 +16,7 @@
 ## <!-- 3 -->📚 Documentation
 
 - Update changelog for v0.3.0 ([d5499cd](https://github.com/goliatone/go-logger/commit/d5499cd0c733e40b5aeb1b63a3394eadeaff87e8))  - (goliatone)
+- Document handler wrapper and writer options in README.
 
 ## <!-- 7 -->⚙️ Miscellaneous Tasks
 

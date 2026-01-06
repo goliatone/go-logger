@@ -382,3 +382,62 @@ func TestFindError(t *testing.T) {
 		})
 	}
 }
+
+type spyHandler struct {
+	handler slog.Handler
+	called  *bool
+}
+
+func (s *spyHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return s.handler.Enabled(ctx, level)
+}
+
+func (s *spyHandler) Handle(ctx context.Context, r slog.Record) error {
+	if s.called != nil {
+		*s.called = true
+	}
+	return s.handler.Handle(ctx, r)
+}
+
+func (s *spyHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &spyHandler{handler: s.handler.WithAttrs(attrs), called: s.called}
+}
+
+func (s *spyHandler) WithGroup(name string) slog.Handler {
+	return &spyHandler{handler: s.handler.WithGroup(name), called: s.called}
+}
+
+func TestWithHandlerWrapper(t *testing.T) {
+	var buf bytes.Buffer
+	var wrappedType string
+	handlerCalled := false
+
+	logger := NewLogger(
+		WithLoggerTypeConsole(),
+		WithWriter(&buf),
+		WithHandlerWrapper(func(h slog.Handler) slog.Handler {
+			wrappedType = fmt.Sprintf("%T", h)
+			return &spyHandler{handler: h, called: &handlerCalled}
+		}),
+	)
+
+	logger.Info("wrapped handler test")
+
+	assert.True(t, handlerCalled, "wrapper handler should be invoked")
+	assert.Equal(t, "*slog.TextHandler", wrappedType)
+	assert.NotEmpty(t, buf.String())
+	assert.Contains(t, buf.String(), "wrapped handler test")
+}
+
+func TestWithWriter(t *testing.T) {
+	var buf bytes.Buffer
+
+	logger := NewLogger(
+		WithLoggerTypeJSON(),
+		WithWriter(&buf),
+	)
+
+	logger.Info("writer override test")
+
+	assert.Contains(t, buf.String(), `"msg":"writer override test"`)
+}
