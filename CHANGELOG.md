@@ -4,10 +4,24 @@
 
 ## <!-- 16 -->➕ Add
 
+- BaseLogger has a handlerWrapper ([d4ca239](https://github.com/goliatone/go-logger/commit/d4ca239aa348a454c47f353c8aa987652f3a79a2))  - (goliatone)
+- New options to configure writer and wrapper ([c3466eb](https://github.com/goliatone/go-logger/commit/c3466ebda681c36dec4502087575f99f075de614))  - (goliatone)
+
+## <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Update tests ([d8a8ecd](https://github.com/goliatone/go-logger/commit/d8a8ecdb9dee884c61e8f2e7270586cccc3fa520))  - (goliatone)
+- Update readme ([6fd3167](https://github.com/goliatone/go-logger/commit/6fd316775192a387230247923217ffdfff327a5a))  - (goliatone)
+
+# [0.4.1](https://github.com/goliatone/go-logger/compare/v0.3.0...v0.4.1) - (2025-10-17)
+
+## <!-- 12 -->🔖 Releases
+
+- V0.4.0 ([1d3fcbf](https://github.com/goliatone/go-logger/commit/1d3fcbfa3fb4fa9eb89709d676519240c34fa3af))  - (goliatone)
+
+## <!-- 16 -->➕ Add
+
 - WithFields method ([15e94a4](https://github.com/goliatone/go-logger/commit/15e94a454d9c223e07925f9837f70e910d631fa4))  - (goliatone)
 - Handle case we send source in attr map ([1fa74ec](https://github.com/goliatone/go-logger/commit/1fa74ec41b461893dcfc76cf3759221931a03afc))  - (goliatone)
-- Handler wrapper option for custom slog handler wrapping.
-- Writer override option for custom output targets.
 
 ## <!-- 22 -->🚧 WIP
 
@@ -16,7 +30,6 @@
 ## <!-- 3 -->📚 Documentation
 
 - Update changelog for v0.3.0 ([d5499cd](https://github.com/goliatone/go-logger/commit/d5499cd0c733e40b5aeb1b63a3394eadeaff87e8))  - (goliatone)
-- Document handler wrapper and writer options in README.
 
 ## <!-- 7 -->⚙️ Miscellaneous Tasks
 
