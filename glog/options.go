@@ -1,6 +1,10 @@
 package glog
 
-import "context"
+import (
+	"context"
+	"io"
+	"log/slog"
+)
 
 type Option func(*BaseLogger)
 
@@ -49,6 +53,23 @@ func WithLoggerTypePretty() Option {
 func WithLoggerTypeJSON() Option {
 	return func(bl *BaseLogger) {
 		bl.loggerType = LoggerTypeJSON
+	}
+}
+
+// WithHandlerWrapper wraps the base slog handler before focus/name handlers.
+func WithHandlerWrapper(wrapper func(slog.Handler) slog.Handler) Option {
+	return func(bl *BaseLogger) {
+		bl.handlerWrapper = wrapper
+	}
+}
+
+// WithWriter sets the output writer for the underlying slog handler.
+func WithWriter(writer io.Writer) Option {
+	return func(bl *BaseLogger) {
+		if writer == nil {
+			return
+		}
+		bl.stdout = writer
 	}
 }
 
