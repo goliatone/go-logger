@@ -89,17 +89,20 @@ func (c *BaseLogger) WithLevel(level string) *BaseLogger {
 // WithLevel sets the log level and returns the logger
 func (c *BaseLogger) WithContext(ctx context.Context) Logger {
 	newLogger := &BaseLogger{
-		logger:     c.logger,
-		root:       c.root,
-		loggers:    c.loggers,
-		opts:       c.opts,
-		ctx:        ctx,
-		name:       c.name,
-		focusMap:   c.focusMap,
-		level:      c.level,
-		addSource:  c.addSource,
-		loggerType: c.loggerType,
-		mu:         c.mu, // we share the mutex pointer
+		logger:         c.logger,
+		root:           c.root,
+		loggers:        c.loggers,
+		opts:           c.opts,
+		ctx:            ctx,
+		name:           c.name,
+		focusMap:       c.focusMap,
+		level:          c.level,
+		addSource:      c.addSource,
+		loggerType:     c.loggerType,
+		stdout:         c.stdout,
+		handlerWrapper: c.handlerWrapper,
+		richErrHandler: c.richErrHandler,
+		mu:             c.mu, // we share the mutex pointer
 	}
 	return newLogger
 }
