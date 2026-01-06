@@ -63,6 +63,9 @@ func (h *ColorConsoleHandler) WithTSFormat(format string) *ColorConsoleHandler {
 
 // Enabled implements slog.Handler.
 func (h *ColorConsoleHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	if h.opts == nil || h.opts.Level == nil {
+		return level >= slog.LevelInfo
+	}
 	return level >= h.opts.Level.Level()
 }
 
@@ -82,7 +85,20 @@ func (h *ColorConsoleHandler) Handle(ctx context.Context, r slog.Record) error {
 	attrMap := make(map[string]any)
 
 	for _, attr := range h.attrs {
-		attrMap[attr.Key] = attr.Value.Any()
+		if h.opts.ReplaceAttr != nil {
+			attr = h.opts.ReplaceAttr(h.groups, attr)
+		}
+
+		if attr.Equal(slog.Attr{}) {
+			continue
+		}
+
+		key := attr.Key
+		if len(h.groups) > 0 {
+			key = strings.Join(append(slices.Clone(h.groups), key), ".")
+		}
+
+		attrMap[key] = attr.Value.Any()
 	}
 
 	r.Attrs(func(a slog.Attr) bool {
