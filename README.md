@@ -58,6 +58,7 @@ log := glog.NewLogger(
     glog.WithAddSource(true),            // Include source file info
     glog.WithContext(ctx),               // Attach context
     glog.WithRichErrorHandler(handler),  // Custom error attribute extraction
+    glog.WithWriter(os.Stdout),          // Override output writer
 )
 ```
 
@@ -72,6 +73,8 @@ log := glog.NewLogger(
 - `WithAddSource(bool)` - Include source file and line number in logs
 - `WithContext(context.Context)` - Attach a context to the logger
 - `WithRichErrorHandler(RichErrorHandler)` - Set custom error attribute extractor
+- `WithHandlerWrapper(func(slog.Handler) slog.Handler)` - Wrap the base slog handler before focus/name handling
+- `WithWriter(io.Writer)` - Override the output writer (e.g. multi-writer for rotation)
 
 ## Log Levels
 
@@ -273,6 +276,31 @@ ctxLog.Info("Processing request")
 ```
 
 ## Advanced Usage
+
+### Wrapping the Handler
+
+Wrap the base slog handler to inject extra attributes or integrate with otel-style handlers:
+
+```go
+log := glog.NewLogger(
+    glog.WithLoggerTypeJSON(),
+    glog.WithHandlerWrapper(func(h slog.Handler) slog.Handler {
+        return otelwrap.WrapHandler(h)
+    }),
+)
+```
+
+### Custom Output Writer
+
+Override the output writer to support file rotation or tee output:
+
+```go
+writer := io.MultiWriter(os.Stdout, lumberjackLogger)
+log := glog.NewLogger(
+    glog.WithLoggerTypeJSON(),
+    glog.WithWriter(writer),
+)
+```
 
 ### Customizing Timestamp Format
 
