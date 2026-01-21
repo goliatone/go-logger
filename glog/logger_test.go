@@ -55,15 +55,19 @@ func TestGetLogger(t *testing.T) {
 	rootLogger := newTestLogger(&buf, WithName("root"), WithLevel(Info), WithLoggerTypePretty())
 
 	child1 := rootLogger.GetLogger("child1")
-	assert.Equal(t, "child1", child1.name)
-	assert.Equal(t, rootLogger, child1.root)
-	assert.Equal(t, rootLogger.level, child1.level)
-	assert.Equal(t, rootLogger.loggerType, child1.loggerType)
+	child1Logger, ok := child1.(*BaseLogger)
+	require.True(t, ok)
+	assert.Equal(t, "child1", child1Logger.name)
+	assert.Equal(t, rootLogger, child1Logger.root)
+	assert.Equal(t, rootLogger.level, child1Logger.level)
+	assert.Equal(t, rootLogger.loggerType, child1Logger.loggerType)
 
 	child1Again := rootLogger.GetLogger("child1")
-	assert.Same(t, child1, child1Again)
+	child1AgainLogger, ok := child1Again.(*BaseLogger)
+	require.True(t, ok)
+	assert.Same(t, child1Logger, child1AgainLogger)
 
-	child1.Info("hello from child")
+	child1Logger.Info("hello from child")
 	output := buf.String()
 	assert.Contains(t, output, "[child1]")
 	assert.Contains(t, output, "hello from child")
@@ -303,26 +307,22 @@ func TestFatal(t *testing.T) {
 	var exitCalled bool
 	var mu sync.Mutex
 
-	originalExit := osExit
-	osExit = func(code int) {
+	exitFunc := func(code int) {
 		mu.Lock()
 		defer mu.Unlock()
 		exitCode = code
 		exitCalled = true
 	}
-	t.Cleanup(func() {
-		osExit = originalExit
-	})
 
 	var buf bytes.Buffer
-	logger := newTestLogger(&buf, WithLoggerTypeConsole())
+	logger := newTestLogger(&buf, WithLoggerTypeConsole(), WithExitFunc(exitFunc))
 
 	logger.Fatal("critical failure")
 
 	mu.Lock()
 	defer mu.Unlock()
 
-	assert.True(t, exitCalled, "os.Exit should have been called")
+	assert.True(t, exitCalled, "exit func should have been called")
 	assert.Equal(t, 1, exitCode, "default exit code should be 1")
 	assert.Contains(t, buf.String(), "critical failure")
 }
