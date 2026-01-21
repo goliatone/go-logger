@@ -80,3 +80,13 @@ func WithRichErrorHandler(handler RichErrorHandler) Option {
 		bl.richErrHandler = handler
 	}
 }
+
+// WithExitFunc overrides the default exit behavior for Fatal.
+func WithExitFunc(exit func(int)) Option {
+	return func(bl *BaseLogger) {
+		if exit == nil {
+			return
+		}
+		bl.exitFunc = exit
+	}
+}
