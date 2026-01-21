@@ -227,6 +227,8 @@ func (h *ColorConsoleHandler) includeSourceInfo(level slog.Level) bool {
 		return true
 	case slog.LevelWarn:
 		return true
+	case LevelFatal:
+		return true
 	default:
 		return h.opts.AddSource
 	}
@@ -256,6 +258,8 @@ func (h *ColorConsoleHandler) colorizeLevel(level slog.Level) string {
 	case slog.LevelWarn:
 		return color.New(color.FgYellow).Sprint(levelName)
 	case slog.LevelError:
+		return color.New(color.FgRed, color.Bold).Sprint(levelName)
+	case LevelFatal:
 		return color.New(color.FgRed, color.Bold).Sprint(levelName)
 	default:
 		return levelName
