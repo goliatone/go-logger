@@ -90,3 +90,10 @@ func WithExitFunc(exit func(int)) Option {
 		bl.exitFunc = exit
 	}
 }
+
+// WithFatalBehavior configures what Fatal does after logging.
+func WithFatalBehavior(behavior FatalBehavior) Option {
+	return func(bl *BaseLogger) {
+		bl.fatalBehavior = behavior
+	}
+}
