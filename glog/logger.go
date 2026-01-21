@@ -23,16 +23,17 @@ type RichErrorHandler func(err error) []slog.Attr
 
 // BaseLogger implements both Logger and LoggerProvider interfaces
 type BaseLogger struct {
-	mu       *sync.RWMutex
-	logger   *slog.Logger
-	root     *BaseLogger
-	loggers  map[string]*BaseLogger
-	opts     *slog.HandlerOptions
-	ctx      context.Context
-	focused  bool
-	focusMap map[string]bool
-	stdout   io.Writer
+	mu             *sync.RWMutex
+	logger         *slog.Logger
+	root           *BaseLogger
+	loggers        map[string]*BaseLogger
+	opts           *slog.HandlerOptions
+	ctx            context.Context
+	focused        bool
+	focusMap       map[string]bool
+	stdout         io.Writer
 	handlerWrapper func(slog.Handler) slog.Handler
+	exitFunc       func(int)
 
 	level      string
 	addSource  bool
@@ -43,6 +44,8 @@ type BaseLogger struct {
 }
 
 var _ FieldsLogger = (*BaseLogger)(nil)
+var _ Logger = (*BaseLogger)(nil)
+var _ LoggerProvider = (*BaseLogger)(nil)
 
 func Arg(key string, value any) any {
 	return slog.Any(key, value)
@@ -102,6 +105,7 @@ func (c *BaseLogger) WithContext(ctx context.Context) Logger {
 		stdout:         c.stdout,
 		handlerWrapper: c.handlerWrapper,
 		richErrHandler: c.richErrHandler,
+		exitFunc:       c.exitFunc,
 		mu:             c.mu, // we share the mutex pointer
 	}
 	return newLogger
@@ -165,7 +169,7 @@ func (c *BaseLogger) isFocused() bool {
 	return root.focusMap[c.name]
 }
 
-func (c *BaseLogger) GetLogger(name string) *BaseLogger {
+func (c *BaseLogger) GetLogger(name string) Logger {
 	root := c.getRoot()
 	root.mu.Lock()
 	defer root.mu.Unlock()
@@ -186,6 +190,7 @@ func (c *BaseLogger) GetLogger(name string) *BaseLogger {
 		level:          c.level,
 		addSource:      c.addSource,
 		loggerType:     c.loggerType,
+		exitFunc:       c.exitFunc,
 		mu:             root.mu, // we share the root mutex
 	}
 
@@ -259,7 +264,11 @@ func (c *BaseLogger) Fatal(msg string, args ...any) {
 	}
 
 	// NOTE: might need to come up with a way to flush any async logs, maybe
-	osExit(code)
+	exitFunc := c.exitFunc
+	if exitFunc == nil {
+		exitFunc = osExit
+	}
+	exitFunc(code)
 }
 
 const (
