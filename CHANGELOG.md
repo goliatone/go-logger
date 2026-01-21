@@ -4,8 +4,35 @@
 
 ## <!-- 1 -->🐛 Bug Fixes
 
+- Arg return ArgList ([86a2df0](https://github.com/goliatone/go-logger/commit/86a2df0b54a7d93dba0f40eb26013c3647f773d4))  - (goliatone)
+- Normalize args ([238308a](https://github.com/goliatone/go-logger/commit/238308a4e1ffb25f17a0022b17c79cfc7d95af7c))  - (goliatone)
+- Badkey assertions ([fb5324a](https://github.com/goliatone/go-logger/commit/fb5324a2a1597a91db096bb7b300d4549f6ba588))  - (goliatone)
+- Breaking change return interface instead of BaseLogger ([7cffdef](https://github.com/goliatone/go-logger/commit/7cffdefbf6f987d843602bdc92d3abd81a7c72c9))  - (goliatone)
+- Args to string msgs ([7bd4a40](https://github.com/goliatone/go-logger/commit/7bd4a407018115ec297f5f3712b9a8ed3457b5c7))  - (goliatone)
+
+## <!-- 16 -->➕ Add
+
+- Fatal behavior is configurable ([d8cc511](https://github.com/goliatone/go-logger/commit/d8cc5114572cbc973fe3a539bb255b16d91abda4))  - (goliatone)
+- Handle fatal level in color console ([eeeb0c5](https://github.com/goliatone/go-logger/commit/eeeb0c59d3bb5ff3791226353882b15a163eb806))  - (goliatone)
+- Exit function config ([3a5218e](https://github.com/goliatone/go-logger/commit/3a5218e4a2dc902f9e090558d8ca8f70fd3b64fd))  - (goliatone)
+
+## <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Update readme ([d949cb2](https://github.com/goliatone/go-logger/commit/d949cb22a7f033bb8f2d0ec4909689031853a5d1))  - (goliatone)
+- Update tests ([ee7a94f](https://github.com/goliatone/go-logger/commit/ee7a94fbc002b4c2406ac9cbf292da0a6488d540))  - (goliatone)
+- Update examples ([8642eff](https://github.com/goliatone/go-logger/commit/8642eff8a8523768724b2139cf9c86c88f2d47df))  - (goliatone)
+- Udpate test ([ab575b7](https://github.com/goliatone/go-logger/commit/ab575b73fe2ea58ace10ebc7095d0bd836ef5a04))  - (goliatone)
+
+# [0.6.0](https://github.com/goliatone/go-logger/compare/v0.5.0...v0.6.0) - (2026-01-06)
+
+## <!-- 1 -->🐛 Bug Fixes
+
 - Guard Enabled for nil level, apply ReplaceAttr ([7113805](https://github.com/goliatone/go-logger/commit/7113805e97806e43c41dc24d861cfa9e7540b658))  - (goliatone)
 - Propagate missing stdout, handlerWrapper tec from logger ([cfae71a](https://github.com/goliatone/go-logger/commit/cfae71a6aadd5f742e2914f084e1076bbcc24b5d))  - (goliatone)
+
+## <!-- 12 -->🔖 Releases
+
+- V0.6.0 ([20c7848](https://github.com/goliatone/go-logger/commit/20c7848198b6002f31d5e4146f0ed01be0306c13))  - (goliatone)
 
 ## <!-- 2 -->🚜 Refactor
 
