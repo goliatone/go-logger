@@ -59,6 +59,7 @@ log := glog.NewLogger(
     glog.WithContext(ctx),               // Attach context
     glog.WithRichErrorHandler(handler),  // Custom error attribute extraction
     glog.WithWriter(os.Stdout),          // Override output writer
+    glog.WithExitFunc(func(int) {}),     // Override Fatal exit behavior
 )
 ```
 
@@ -75,6 +76,7 @@ log := glog.NewLogger(
 - `WithRichErrorHandler(RichErrorHandler)` - Set custom error attribute extractor
 - `WithHandlerWrapper(func(slog.Handler) slog.Handler)` - Wrap the base slog handler before focus/name handling
 - `WithWriter(io.Writer)` - Override the output writer (e.g. multi-writer for rotation)
+- `WithExitFunc(func(int))` - Override the exit behavior used by `Fatal`
 
 ## Log Levels
 
@@ -93,8 +95,10 @@ log.Debug("Debug information")
 log.Info("General information")
 log.Warn("Warning message")
 log.Error("Error occurred", errorInstance)
-log.Fatal("Fatal error", err) // This will exit the program
+log.Fatal("Fatal error", err) // This will exit the program by default
 ```
+
+Use `WithExitFunc` to customize or disable the exit behavior during testing or in libraries.
 
 ## Named Loggers
 
@@ -164,6 +168,8 @@ requestLog := log.With(
 requestLog.Info("Processing started")
 requestLog.Info("Processing completed")
 ```
+
+Malformed key/value pairs are captured under the `!BADKEY` attribute with a descriptive message.
 
 ### Optional Structured Fields
 
