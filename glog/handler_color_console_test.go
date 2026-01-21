@@ -141,6 +141,7 @@ func TestColorizeLevel(t *testing.T) {
 		{slog.LevelInfo, "INFO  "},
 		{slog.LevelWarn, "WARN  "},
 		{slog.LevelError, "ERROR "},
+		{LevelFatal, "FATAL "},
 	}
 
 	for _, tc := range testCases {

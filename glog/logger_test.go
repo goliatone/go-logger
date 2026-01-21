@@ -266,6 +266,20 @@ func TestWithFieldsComposition(t *testing.T) {
 	assert.Contains(t, output, `"msg":"user action"`)
 }
 
+func TestArgsHelperExpansion(t *testing.T) {
+	var buf bytes.Buffer
+	logger := newTestLogger(&buf, WithLoggerTypeJSON(), WithLevel(Debug))
+
+	logger.Debug("request processed", Args(
+		"method", "POST",
+		"status", 200,
+	))
+
+	output := buf.String()
+	assert.Contains(t, output, `"method":"POST"`)
+	assert.Contains(t, output, `"status":200`)
+}
+
 func TestFocusAndUnfocus(t *testing.T) {
 	var buf bytes.Buffer
 	root := newTestLogger(&buf, WithLoggerTypePretty(), WithLevel(Debug))
@@ -327,6 +341,53 @@ func TestFatal(t *testing.T) {
 	assert.Contains(t, buf.String(), "critical failure")
 }
 
+func TestFatalBehaviorLogOnly(t *testing.T) {
+	var exitCalled bool
+
+	var buf bytes.Buffer
+	logger := newTestLogger(&buf,
+		WithLoggerTypeJSON(),
+		WithFatalBehavior(FatalBehaviorLogOnly),
+		WithExitFunc(func(int) {
+			exitCalled = true
+		}),
+	)
+
+	logger.Fatal("fatal but no exit")
+
+	assert.False(t, exitCalled, "exit func should not be called for log-only fatal behavior")
+	assert.Contains(t, buf.String(), `"msg":"fatal but no exit"`)
+}
+
+func TestFatalBehaviorPanic(t *testing.T) {
+	var buf bytes.Buffer
+	logger := newTestLogger(&buf,
+		WithLoggerTypeJSON(),
+		WithFatalBehavior(FatalBehaviorPanic),
+	)
+
+	assert.PanicsWithValue(t, "panic now", func() {
+		logger.Fatal("panic now")
+	})
+}
+
+func TestFatalLevelFiltering(t *testing.T) {
+	var buf bytes.Buffer
+	logger := newTestLogger(&buf,
+		WithLoggerTypeJSON(),
+		WithLevel(Fatal),
+		WithFatalBehavior(FatalBehaviorLogOnly),
+	)
+
+	logger.Error("should be hidden", errors.New("boom"))
+	assert.Empty(t, buf.String())
+
+	logger.Fatal("should be shown")
+	output := buf.String()
+	assert.Contains(t, output, `"msg":"should be shown"`)
+	assert.Contains(t, output, `"level":"fatal"`)
+}
+
 func TestFindError(t *testing.T) {
 	errSample := errors.New("i am an error")
 
@@ -367,6 +428,13 @@ func TestFindError(t *testing.T) {
 			shouldMatch: true,
 		},
 		{
+			name:        "error is in slog.Attr",
+			args:        []any{slog.Any("error", errSample), "request_id", "123"},
+			expectedErr: errSample,
+			expectedRem: []any{"request_id", "123"},
+			shouldMatch: true,
+		},
+		{
 			name:        "first error is found",
 			args:        []any{errors.New("first"), errors.New("second")},
 			expectedErr: errors.New("first"),
@@ -391,6 +459,28 @@ func TestFindError(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWithLevelPropagatesToChildren(t *testing.T) {
+	var buf bytes.Buffer
+	root := newTestLogger(&buf, WithLevel(Info), WithLoggerTypeJSON())
+	child := root.GetLogger("child").(*BaseLogger)
+
+	root.WithLevel(Debug)
+
+	assert.Equal(t, Debug, root.level)
+	assert.Equal(t, Debug, child.level)
+}
+
+func TestWithLoggerTypePropagatesToChildren(t *testing.T) {
+	var buf bytes.Buffer
+	root := newTestLogger(&buf, WithLoggerTypeJSON())
+	child := root.GetLogger("child").(*BaseLogger)
+
+	root.WithLoggerType(LoggerTypePretty)
+
+	assert.Equal(t, LoggerTypePretty, root.loggerType)
+	assert.Equal(t, LoggerTypePretty, child.loggerType)
 }
 
 type spyHandler struct {

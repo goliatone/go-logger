@@ -65,6 +65,24 @@ func TestArgsToAttrSlice(t *testing.T) {
 		assert.Equal(t, expected, attrs)
 	})
 
+	t.Run("Args helper expands in key position", func(t *testing.T) {
+		args := []any{Args("key1", "val1", "key2", 2)}
+		attrs := argsToAttrSlice(args)
+		expected := []any{
+			slog.Any("key1", "val1"),
+			slog.Any("key2", 2),
+		}
+		assert.Equal(t, expected, attrs)
+	})
+
+	t.Run("Args helper used as value", func(t *testing.T) {
+		args := []any{"keys", Args("key1", "val1")}
+		attr, remaining := argsToAttr(args)
+		assert.Equal(t, "keys", attr.Key)
+		assert.Equal(t, ArgsList{slog.Any("key1", "val1")}, attr.Value.Any())
+		assert.Nil(t, remaining)
+	})
+
 	t.Run("trailing key", func(t *testing.T) {
 		args := []any{"key1", "val1", "trailing_key"}
 		attrs := argsToAttrSlice(args)
