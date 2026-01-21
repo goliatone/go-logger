@@ -32,6 +32,14 @@ type FieldsLogger interface {
 	WithFields(map[string]any) Logger
 }
 
+type FatalBehavior int
+
+const (
+	FatalBehaviorExit FatalBehavior = iota
+	FatalBehaviorPanic
+	FatalBehaviorLogOnly
+)
+
 const (
 	LevelTrace = slog.Level(-8)
 	LevelFatal = slog.Level(20)
