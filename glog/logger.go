@@ -34,6 +34,7 @@ type BaseLogger struct {
 	stdout         io.Writer
 	handlerWrapper func(slog.Handler) slog.Handler
 	exitFunc       func(int)
+	fatalBehavior  FatalBehavior
 
 	level      string
 	addSource  bool
@@ -47,12 +48,14 @@ var _ FieldsLogger = (*BaseLogger)(nil)
 var _ Logger = (*BaseLogger)(nil)
 var _ LoggerProvider = (*BaseLogger)(nil)
 
+type ArgsList []any
+
 func Arg(key string, value any) any {
 	return slog.Any(key, value)
 }
 
-func Args(args ...any) any {
-	return argsToAttrSlice(args)
+func Args(args ...any) ArgsList {
+	return ArgsList(argsToAttrSlice(args))
 }
 
 func NewLogger(options ...Option) *BaseLogger {
@@ -65,6 +68,7 @@ func NewLogger(options ...Option) *BaseLogger {
 		focusMap:       map[string]bool{},
 		stdout:         os.Stdout,
 		richErrHandler: defaultErrHandler,
+		fatalBehavior:  FatalBehaviorExit,
 	}
 
 	for _, option := range options {
@@ -84,8 +88,19 @@ func NewLogger(options ...Option) *BaseLogger {
 
 // WithLevel sets the log level and returns the logger
 func (c *BaseLogger) WithLevel(level string) *BaseLogger {
+	root := c.getRoot()
+	root.mu.Lock()
+	defer root.mu.Unlock()
+
 	c.level = level
 	c.configureLogger()
+
+	if c == root {
+		for _, logger := range root.loggers {
+			logger.level = level
+			logger.configureLogger()
+		}
+	}
 	return c
 }
 
@@ -106,14 +121,26 @@ func (c *BaseLogger) WithContext(ctx context.Context) Logger {
 		handlerWrapper: c.handlerWrapper,
 		richErrHandler: c.richErrHandler,
 		exitFunc:       c.exitFunc,
+		fatalBehavior:  c.fatalBehavior,
 		mu:             c.mu, // we share the mutex pointer
 	}
 	return newLogger
 }
 
 func (c *BaseLogger) WithLoggerType(loggerType string) Logger {
+	root := c.getRoot()
+	root.mu.Lock()
+	defer root.mu.Unlock()
+
 	c.loggerType = loggerType
 	c.configureLogger()
+
+	if c == root {
+		for _, logger := range root.loggers {
+			logger.loggerType = loggerType
+			logger.configureLogger()
+		}
+	}
 	return c
 }
 
@@ -191,6 +218,7 @@ func (c *BaseLogger) GetLogger(name string) Logger {
 		addSource:      c.addSource,
 		loggerType:     c.loggerType,
 		exitFunc:       c.exitFunc,
+		fatalBehavior:  c.fatalBehavior,
 		mu:             root.mu, // we share the root mutex
 	}
 
@@ -250,25 +278,35 @@ func (c *BaseLogger) Warn(msg string, args ...any) {
 }
 
 func (c *BaseLogger) Error(msg string, args ...any) {
-	c.errorWithSkip(msg, defaultSkipFrames, args...)
+	c.errorWithSkip(slog.LevelError, msg, defaultSkipFrames, args...)
 }
 
 func (c *BaseLogger) Fatal(msg string, args ...any) {
-	c.errorWithSkip(msg, defaultSkipFrames, args...)
+	err := c.errorWithSkip(LevelFatal, msg, defaultSkipFrames, args...)
 
-	code := 1
-	if err, _ := findError(args); err != nil {
-		if ce, ok := err.(coder); ok {
-			code = ce.Code()
+	switch c.fatalBehavior {
+	case FatalBehaviorLogOnly:
+		return
+	case FatalBehaviorPanic:
+		if err != nil {
+			panic(err)
 		}
-	}
+		panic(msg)
+	default:
+		code := 1
+		if err != nil {
+			if ce, ok := err.(coder); ok {
+				code = ce.Code()
+			}
+		}
 
-	// NOTE: might need to come up with a way to flush any async logs, maybe
-	exitFunc := c.exitFunc
-	if exitFunc == nil {
-		exitFunc = osExit
+		// NOTE: might need to come up with a way to flush any async logs, maybe
+		exitFunc := c.exitFunc
+		if exitFunc == nil {
+			exitFunc = osExit
+		}
+		exitFunc(code)
 	}
-	exitFunc(code)
 }
 
 const (
@@ -284,6 +322,11 @@ func (c *BaseLogger) log(ctx context.Context, level slog.Level, msg string, args
 }
 
 func (c *BaseLogger) logWithSkip(ctx context.Context, level slog.Level, msg string, skip int, args ...any) {
+	normalized := normalizeArgs(args)
+	c.logWithSkipNormalized(ctx, level, msg, skip, normalized)
+}
+
+func (c *BaseLogger) logWithSkipNormalized(ctx context.Context, level slog.Level, msg string, skip int, args []any) {
 	if !c.logger.Enabled(ctx, level) {
 		return
 	}
@@ -299,11 +342,12 @@ func (c *BaseLogger) logWithSkip(ctx context.Context, level slog.Level, msg stri
 	_ = c.logger.Handler().Handle(ctx, r)
 }
 
-func (c *BaseLogger) errorWithSkip(msg string, skip int, args ...any) {
-	err, nargs := findError(args)
+func (c *BaseLogger) errorWithSkip(level slog.Level, msg string, skip int, args ...any) error {
+	normalized := normalizeArgs(args)
+	err, nargs := findError(normalized)
 	if err == nil {
-		c.logWithSkip(c.ctx, slog.LevelError, msg, skip, nargs...)
-		return
+		c.logWithSkipNormalized(c.ctx, level, msg, skip, nargs)
+		return nil
 	}
 
 	dargs := nargs
@@ -335,7 +379,8 @@ func (c *BaseLogger) errorWithSkip(msg string, skip int, args ...any) {
 
 	dargs = append(dargs, slog.Any("stack", stack))
 
-	c.logWithSkip(c.ctx, slog.LevelError, msg, skip, dargs...)
+	c.logWithSkipNormalized(c.ctx, level, msg, skip, dargs)
+	return err
 }
 
 func findError(args []any) (errFound error, remaining []any) {
@@ -353,6 +398,17 @@ func findError(args []any) (errFound error, remaining []any) {
 				i++
 				continue
 			}
+		}
+
+		if attr, ok := args[i].(slog.Attr); ok && attr.Key == "error" {
+			if errVal, ok := attr.Value.Any().(error); ok && errVal != nil {
+				if errFound == nil {
+					errFound = errVal
+					continue
+				}
+			}
+			remaining = append(remaining, attr)
+			continue
 		}
 
 		if e, ok := args[i].(error); ok && e != nil && errFound == nil {
@@ -467,6 +523,8 @@ func getLevel(l string) slog.Level {
 		return slog.LevelDebug
 	case "TRACE":
 		return LevelTrace
+	case "FATAL":
+		return LevelFatal
 	default:
 		return slog.LevelInfo
 	}
