@@ -60,13 +60,14 @@ log := glog.NewLogger(
     glog.WithRichErrorHandler(handler),  // Custom error attribute extraction
     glog.WithWriter(os.Stdout),          // Override output writer
     glog.WithExitFunc(func(int) {}),     // Override Fatal exit behavior
+    glog.WithFatalBehavior(glog.FatalBehaviorLogOnly), // Control Fatal behavior
 )
 ```
 
 ### Available Options
 
 - `WithName(string)` - Set the logger name
-- `WithLevel(string)` - Set the minimum log level (TRACE, DEBUG, INFO, WARN, ERROR)
+- `WithLevel(string)` - Set the minimum log level (TRACE, DEBUG, INFO, WARN, ERROR, FATAL)
 - `WithLoggerType(string)` - Set output format (json, console, pretty)
 - `WithLoggerTypeJSON()` - Use JSON output format
 - `WithLoggerTypeConsole()` - Use plain text output format
@@ -77,6 +78,7 @@ log := glog.NewLogger(
 - `WithHandlerWrapper(func(slog.Handler) slog.Handler)` - Wrap the base slog handler before focus/name handling
 - `WithWriter(io.Writer)` - Override the output writer (e.g. multi-writer for rotation)
 - `WithExitFunc(func(int))` - Override the exit behavior used by `Fatal`
+- `WithFatalBehavior(FatalBehavior)` - Configure Fatal to exit, panic, or log only
 
 ## Log Levels
 
@@ -87,7 +89,7 @@ The logger supports the following levels (from lowest to highest severity):
 - `INFO` - General informational messages
 - `WARN` - Warning messages
 - `ERROR` - Error messages with stack traces
-- `FATAL` - Fatal errors that terminate the program
+- `FATAL` - Fatal errors (default: log then exit)
 
 ```go
 log.Trace("Detailed trace info")
@@ -98,7 +100,7 @@ log.Error("Error occurred", errorInstance)
 log.Fatal("Fatal error", err) // This will exit the program by default
 ```
 
-Use `WithExitFunc` to customize or disable the exit behavior during testing or in libraries.
+Use `WithFatalBehavior` to change Fatal to panic or log-only, and `WithExitFunc` to customize exit behavior.
 
 ## Named Loggers
 
