@@ -173,6 +173,25 @@ requestLog.Info("Processing completed")
 
 Malformed key/value pairs are captured under the `!BADKEY` attribute with a descriptive message.
 
+## Dependency Injection Helpers
+
+Use the shared helper API to resolve logger/provider wiring with deterministic precedence (`provider > logger > nop`):
+
+```go
+provider, logger := glog.Resolve("admin", deps.LoggerProvider, deps.Logger)
+
+logger.Info("logger resolved")
+provider.GetLogger("admin.dashboard").Debug("child logger")
+```
+
+Available helpers:
+
+- `glog.Nop()`: canonical no-op logger
+- `glog.Ensure(logger)`: guarantees a non-nil logger
+- `glog.ProviderFromLogger(logger)`: wraps a logger as a provider
+- `glog.ProviderWithFallback(provider, fallback)`: provider wrapper with fallback logger
+- `glog.Resolve(name, provider, logger)`: shared resolution flow
+
 ### Optional Structured Fields
 
 Loggers that implement `glog.FieldsLogger` allow you to attach a map of fields in a single call while keeping the base `Logger` interface minimal:
