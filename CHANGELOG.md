@@ -15,6 +15,7 @@
 - Fatal behavior is configurable ([d8cc511](https://github.com/goliatone/go-logger/commit/d8cc5114572cbc973fe3a539bb255b16d91abda4))  - (goliatone)
 - Handle fatal level in color console ([eeeb0c5](https://github.com/goliatone/go-logger/commit/eeeb0c59d3bb5ff3791226353882b15a163eb806))  - (goliatone)
 - Exit function config ([3a5218e](https://github.com/goliatone/go-logger/commit/3a5218e4a2dc902f9e090558d8ca8f70fd3b64fd))  - (goliatone)
+- Shared DI helper APIs: `Nop`, `Ensure`, `ProviderFromLogger`, `ProviderWithFallback`, and `Resolve`.  - (codex)
 
 ## <!-- 7 -->⚙️ Miscellaneous Tasks
 
