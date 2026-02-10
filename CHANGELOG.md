@@ -2,6 +2,19 @@
 
 # [unreleased]
 
+## <!-- 16 -->➕ Add
+
+- FormattedLogger to handle older versions ([08d883e](https://github.com/goliatone/go-logger/commit/08d883e77c0e6b0c6ad779024a49ccd191612275))  - (goliatone)
+- Helpers to provide canonical noop and other utiliteis ([786dad5](https://github.com/goliatone/go-logger/commit/786dad541ae8e4fb8c96c744ebcf76849d7d3ba4))  - (goliatone)
+
+## <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Update docs ([e5ca2f6](https://github.com/goliatone/go-logger/commit/e5ca2f6fbeab8f1a9bc511196042d12297737999))  - (goliatone)
+- Update readme ([6c50eb1](https://github.com/goliatone/go-logger/commit/6c50eb11bd98d1bc0355e86645432dd91d795d72))  - (goliatone)
+- Update tests ([6cb24fa](https://github.com/goliatone/go-logger/commit/6cb24fa0fbf2a79b2deb08de594062e1d17f059e))  - (goliatone)
+
+# [0.7.0](https://github.com/goliatone/go-logger/compare/v0.6.0...v0.7.0) - (2026-01-21)
+
 ## <!-- 1 -->🐛 Bug Fixes
 
 - Arg return ArgList ([86a2df0](https://github.com/goliatone/go-logger/commit/86a2df0b54a7d93dba0f40eb26013c3647f773d4))  - (goliatone)
@@ -10,12 +23,15 @@
 - Breaking change return interface instead of BaseLogger ([7cffdef](https://github.com/goliatone/go-logger/commit/7cffdefbf6f987d843602bdc92d3abd81a7c72c9))  - (goliatone)
 - Args to string msgs ([7bd4a40](https://github.com/goliatone/go-logger/commit/7bd4a407018115ec297f5f3712b9a8ed3457b5c7))  - (goliatone)
 
+## <!-- 12 -->🔖 Releases
+
+- V0.7.0 ([67bb5ad](https://github.com/goliatone/go-logger/commit/67bb5adedcfdfc145bcc97f5ac048d421a81267e))  - (goliatone)
+
 ## <!-- 16 -->➕ Add
 
 - Fatal behavior is configurable ([d8cc511](https://github.com/goliatone/go-logger/commit/d8cc5114572cbc973fe3a539bb255b16d91abda4))  - (goliatone)
 - Handle fatal level in color console ([eeeb0c5](https://github.com/goliatone/go-logger/commit/eeeb0c59d3bb5ff3791226353882b15a163eb806))  - (goliatone)
 - Exit function config ([3a5218e](https://github.com/goliatone/go-logger/commit/3a5218e4a2dc902f9e090558d8ca8f70fd3b64fd))  - (goliatone)
-- Shared DI helper APIs: `Nop`, `Ensure`, `ProviderFromLogger`, `ProviderWithFallback`, and `Resolve`.  - (codex)
 
 ## <!-- 7 -->⚙️ Miscellaneous Tasks
 
