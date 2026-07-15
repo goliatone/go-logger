@@ -140,6 +140,39 @@ func TestWithErrorLogging(t *testing.T) {
 	assert.Contains(t, output, `glog.TestWithErrorLogging`)
 }
 
+type uncomparableError []string
+
+func (e uncomparableError) Error() string {
+	return strings.Join(e, ": ")
+}
+
+func TestErrorLoggingAcceptsUncomparableErrors(t *testing.T) {
+	err := uncomparableError{"readiness failed", "archive route index unavailable"}
+
+	for _, tt := range []struct {
+		name string
+		args []any
+	}{
+		{name: "bare error", args: []any{err}},
+		{name: "keyed error", args: []any{"error", err}},
+		{name: "slog attribute", args: []any{slog.Any("error", err)}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			logger := newTestLogger(&buf, WithLoggerTypeJSON())
+
+			assert.NotPanics(t, func() {
+				logger.Error("optional capability refresh failed", tt.args...)
+			})
+
+			output := buf.String()
+			assert.Contains(t, output, `"msg":"optional capability refresh failed"`)
+			assert.Contains(t, output, `"error":"readiness failed: archive route index unavailable"`)
+			assert.NotContains(t, output, `"root_error"`)
+		})
+	}
+}
+
 type customError struct {
 	msg    string
 	code   int
