@@ -2,6 +2,21 @@
 
 # [unreleased]
 
+## <!-- 1 -->🐛 Bug Fixes
+
+- Bund child collection in ordered cycle ([cfdb0db](https://github.com/goliatone/go-logger/commit/cfdb0db1b00bc1736f9bc4dbdbfff10413373c1f))  - (goliatone)
+
+## <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Update tests ([0352ab6](https://github.com/goliatone/go-logger/commit/0352ab655a0d43edd161a718aac00b0c46129221))  - (goliatone)
+- Code quality ([d67323a](https://github.com/goliatone/go-logger/commit/d67323a912429db604385d3c01cee00dc50a84cf))  - (goliatone)
+
+# [0.8.2](https://github.com/goliatone/go-logger/compare/v0.8.1...v0.8.2) - (2026-07-15)
+
+## <!-- 12 -->🔖 Releases
+
+- V0.8.2 ([a187185](https://github.com/goliatone/go-logger/commit/a1871858c5521bc1e77950c0849b7dafe81c2006))  - (goliatone)
+
 ## <!-- 16 -->➕ Add
 
 - Bounded cycle safe travesarl for error stacks ([3441a1b](https://github.com/goliatone/go-logger/commit/3441a1b1cfdcc748b878a3a14c9871823a30793f))  - (goliatone)
