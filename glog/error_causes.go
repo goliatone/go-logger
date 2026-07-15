@@ -39,11 +39,14 @@ func inspectErrorCauses(err error) errorCauseInspection {
 		if visited >= maxErrorCauseNodes {
 			inspection.truncated = true
 			inspection.appendLeaf(current)
-			break
+			continue
 		}
 		visited++
 
-		children, unwrapped := unwrapErrorChildren(current)
+		children, unwrapped, truncated := unwrapErrorChildren(current)
+		if truncated {
+			inspection.truncated = true
+		}
 		if !unwrapped || len(children) == 0 {
 			inspection.appendLeaf(current)
 			continue
@@ -51,6 +54,11 @@ func inspectErrorCauses(err error) errorCauseInspection {
 		inspection.unwrapped = true
 		if len(children) > 1 {
 			inspection.branching = true
+		}
+		available := maxErrorCauseNodes - len(stack)
+		if available < len(children) {
+			children = children[:available]
+			inspection.truncated = true
 		}
 		for i := len(children) - 1; i >= 0; i-- {
 			stack = append(stack, children[i])
@@ -71,28 +79,32 @@ func (i *errorCauseInspection) appendLeaf(err error) {
 	}
 }
 
-func unwrapErrorChildren(err error) (children []error, unwrapped bool) {
+func unwrapErrorChildren(err error) (children []error, unwrapped bool, truncated bool) {
 	defer func() {
 		if recover() != nil {
 			children = nil
 			unwrapped = false
+			truncated = true
 		}
 	}()
 
 	if multi, ok := err.(interface{ Unwrap() []error }); ok {
 		for _, child := range multi.Unwrap() {
 			if child != nil {
+				if len(children) == maxErrorCauseNodes {
+					return children, true, true
+				}
 				children = append(children, child)
 			}
 		}
-		return children, len(children) > 0
+		return children, len(children) > 0, false
 	}
 	if single, ok := err.(interface{ Unwrap() error }); ok {
 		if child := single.Unwrap(); child != nil {
-			return []error{child}, true
+			return []error{child}, true, false
 		}
 	}
-	return nil, false
+	return nil, false, false
 }
 
 func boundedErrorText(err error) (string, bool) {
