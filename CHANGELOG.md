@@ -2,6 +2,20 @@
 
 # [unreleased]
 
+## <!-- 1 -->🐛 Bug Fixes
+
+- Check before comp ([b8002e3](https://github.com/goliatone/go-logger/commit/b8002e3b4b84af3a0dab8c72b13c06b2b27e194a))  - (goliatone)
+
+## <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Update tests ([6f5ff0f](https://github.com/goliatone/go-logger/commit/6f5ff0f1885b050df6083bc48ea4aac7262164d6))  - (goliatone)
+
+# [0.8.0](https://github.com/goliatone/go-logger/compare/v0.7.0...v0.8.0) - (2026-02-10)
+
+## <!-- 12 -->🔖 Releases
+
+- V0.8.0 ([1c7b6e3](https://github.com/goliatone/go-logger/commit/1c7b6e31e9542837e6448a164c187394002eeb93))  - (goliatone)
+
 ## <!-- 16 -->➕ Add
 
 - FormattedLogger to handle older versions ([08d883e](https://github.com/goliatone/go-logger/commit/08d883e77c0e6b0c6ad779024a49ccd191612275))  - (goliatone)
