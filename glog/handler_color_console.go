@@ -175,10 +175,7 @@ func (h *ColorConsoleHandler) Handle(ctx context.Context, r slog.Record) error {
 }
 
 func (h *ColorConsoleHandler) updateMaxNameLen(name string) {
-	effectiveLen := len(name)
-	if effectiveLen > maxAllowedNameLen {
-		effectiveLen = maxAllowedNameLen
-	}
+	effectiveLen := min(len(name), maxAllowedNameLen)
 	maxDisplayNameLenMu.Lock()
 	defer maxDisplayNameLenMu.Unlock()
 
