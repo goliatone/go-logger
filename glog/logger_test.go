@@ -221,6 +221,16 @@ func TestErrorLoggingTraversesUncomparableAndMultiErrorCauses(t *testing.T) {
 		assert.Contains(t, output, `"error_causes_truncated":true`)
 	})
 
+	t.Run("cyclic branch does not hide later siblings", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := newTestLogger(&buf, WithLoggerTypeJSON())
+		logger.Error("cyclic multi failure", errors.Join(cyclicError{}, errors.New("healthy sibling")))
+
+		output := buf.String()
+		assert.Contains(t, output, `"error_causes":["cyclic error","healthy sibling"]`)
+		assert.Contains(t, output, `"error_causes_truncated":true`)
+	})
+
 	t.Run("leaf count is bounded", func(t *testing.T) {
 		causes := make([]error, maxErrorCauseLeaves+2)
 		for i := range causes {
