@@ -2,7 +2,6 @@ package glog
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -360,22 +359,16 @@ func (c *BaseLogger) errorWithSkip(level slog.Level, msg string, skip int, args 
 		}
 	}
 
-	root := err
-	didUnwrap := false
-	for {
-		unwrapped := errors.Unwrap(root)
-		if unwrapped == nil {
-			break
+	inspection := inspectErrorCauses(err)
+	if inspection.unwrapped {
+		if inspection.branching {
+			dargs = append(dargs, slog.Any("error_causes", inspection.leaves))
+		} else if len(inspection.leaves) == 1 {
+			dargs = append(dargs, slog.String("root_error", inspection.leaves[0]))
 		}
-		root = unwrapped
-		didUnwrap = true
-	}
-
-	// Error implementations are not required to be comparable. Track whether
-	// the chain was unwrapped instead of comparing interface values, which
-	// panics when an error's dynamic value contains a slice, map, or function.
-	if didUnwrap {
-		dargs = append(dargs, slog.Any("root_error", root))
+		if inspection.truncated {
+			dargs = append(dargs, slog.Bool("error_causes_truncated", true))
+		}
 	}
 
 	dargs = append(dargs, slog.Any("error", err))

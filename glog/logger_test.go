@@ -146,6 +146,21 @@ func (e uncomparableError) Error() string {
 	return strings.Join(e, ": ")
 }
 
+type uncomparableWrappedError []string
+
+func (e uncomparableWrappedError) Error() string {
+	return strings.Join(e, ": ")
+}
+
+func (e uncomparableWrappedError) Unwrap() error {
+	return errors.New("uncomparable root")
+}
+
+type cyclicError struct{}
+
+func (cyclicError) Error() string   { return "cyclic error" }
+func (e cyclicError) Unwrap() error { return e }
+
 func TestErrorLoggingAcceptsUncomparableErrors(t *testing.T) {
 	err := uncomparableError{"readiness failed", "archive route index unavailable"}
 
@@ -171,6 +186,65 @@ func TestErrorLoggingAcceptsUncomparableErrors(t *testing.T) {
 			assert.NotContains(t, output, `"root_error"`)
 		})
 	}
+}
+
+func TestErrorLoggingTraversesUncomparableAndMultiErrorCauses(t *testing.T) {
+	t.Run("uncomparable linear wrapper", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := newTestLogger(&buf, WithLoggerTypeJSON())
+		logger.Error("linear failure", uncomparableWrappedError{"wrapped"})
+
+		output := buf.String()
+		assert.Contains(t, output, `"root_error":"uncomparable root"`)
+		assert.NotContains(t, output, `"error_causes"`)
+	})
+
+	t.Run("branching multi error", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := newTestLogger(&buf, WithLoggerTypeJSON())
+		first := errors.New("first cause")
+		second := errors.New("second cause")
+		logger.Error("multi failure", errors.Join(first, fmt.Errorf("wrapped: %w", second)))
+
+		output := buf.String()
+		assert.Contains(t, output, `"error_causes":["first cause","second cause"]`)
+		assert.NotContains(t, output, `"root_error"`)
+	})
+
+	t.Run("cyclic chain is bounded", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := newTestLogger(&buf, WithLoggerTypeJSON())
+		logger.Error("cyclic failure", cyclicError{})
+
+		output := buf.String()
+		assert.Contains(t, output, `"root_error":"cyclic error"`)
+		assert.Contains(t, output, `"error_causes_truncated":true`)
+	})
+
+	t.Run("leaf count is bounded", func(t *testing.T) {
+		causes := make([]error, maxErrorCauseLeaves+2)
+		for i := range causes {
+			causes[i] = fmt.Errorf("cause-%02d", i)
+		}
+		var buf bytes.Buffer
+		logger := newTestLogger(&buf, WithLoggerTypeJSON())
+		logger.Error("large multi failure", errors.Join(causes...))
+
+		output := buf.String()
+		assert.Contains(t, output, `"error_causes_truncated":true`)
+		assert.Contains(t, output, `"cause-15"`)
+		assert.NotContains(t, output, `"cause-16"`)
+	})
+
+	t.Run("leaf text is bounded", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := newTestLogger(&buf, WithLoggerTypeJSON())
+		logger.Error("large cause", fmt.Errorf("wrapper: %w", errors.New(strings.Repeat("x", maxErrorCauseTextBytes+10))))
+
+		output := buf.String()
+		assert.Contains(t, output, `"error_causes_truncated":true`)
+		assert.Contains(t, output, `"root_error":"`)
+	})
 }
 
 type customError struct {
