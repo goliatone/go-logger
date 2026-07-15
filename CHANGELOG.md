@@ -2,9 +2,19 @@
 
 # [unreleased]
 
+## <!-- 16 -->➕ Add
+
+- Bounded cycle safe travesarl for error stacks ([3441a1b](https://github.com/goliatone/go-logger/commit/3441a1b1cfdcc748b878a3a14c9871823a30793f))  - (goliatone)
+
+# [0.8.1](https://github.com/goliatone/go-logger/compare/v0.8.0...v0.8.1) - (2026-07-15)
+
 ## <!-- 1 -->🐛 Bug Fixes
 
 - Check before comp ([b8002e3](https://github.com/goliatone/go-logger/commit/b8002e3b4b84af3a0dab8c72b13c06b2b27e194a))  - (goliatone)
+
+## <!-- 12 -->🔖 Releases
+
+- V0.8.1 ([d15f551](https://github.com/goliatone/go-logger/commit/d15f551e47b7fefc2dcb55789797c5dcfd18dd6e))  - (goliatone)
 
 ## <!-- 7 -->⚙️ Miscellaneous Tasks
 
