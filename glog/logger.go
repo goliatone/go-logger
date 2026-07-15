@@ -361,15 +361,20 @@ func (c *BaseLogger) errorWithSkip(level slog.Level, msg string, skip int, args 
 	}
 
 	root := err
+	didUnwrap := false
 	for {
 		unwrapped := errors.Unwrap(root)
 		if unwrapped == nil {
 			break
 		}
 		root = unwrapped
+		didUnwrap = true
 	}
 
-	if root != err {
+	// Error implementations are not required to be comparable. Track whether
+	// the chain was unwrapped instead of comparing interface values, which
+	// panics when an error's dynamic value contains a slice, map, or function.
+	if didUnwrap {
 		dargs = append(dargs, slog.Any("root_error", root))
 	}
 
