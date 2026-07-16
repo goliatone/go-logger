@@ -4,7 +4,17 @@
 
 ## <!-- 1 -->🐛 Bug Fixes
 
+- Max error depth ([1ae98f4](https://github.com/goliatone/go-logger/commit/1ae98f425329f320ac923ac86259ee959a9b9dd5))  - (goliatone)
+
+# [0.8.3](https://github.com/goliatone/go-logger/compare/v0.8.2...v0.8.3) - (2026-07-15)
+
+## <!-- 1 -->🐛 Bug Fixes
+
 - Bund child collection in ordered cycle ([cfdb0db](https://github.com/goliatone/go-logger/commit/cfdb0db1b00bc1736f9bc4dbdbfff10413373c1f))  - (goliatone)
+
+## <!-- 12 -->🔖 Releases
+
+- V0.8.3 ([c682576](https://github.com/goliatone/go-logger/commit/c6825761cb84bff084661b2a791563f64881421a))  - (goliatone)
 
 ## <!-- 7 -->⚙️ Miscellaneous Tasks
 
