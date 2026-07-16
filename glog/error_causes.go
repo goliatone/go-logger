@@ -7,10 +7,17 @@ import (
 )
 
 const (
-	maxErrorCauseNodes     = 64
+	maxErrorCauseDepth     = 64
+	maxErrorCauseChildren  = 64
 	maxErrorCauseLeaves    = 16
+	maxErrorCauseNodes     = maxErrorCauseLeaves*(maxErrorCauseDepth+1) + 1
 	maxErrorCauseTextBytes = 1024
 )
+
+type pendingErrorCause struct {
+	err   error
+	depth int
+}
 
 type errorCauseInspection struct {
 	leaves    []string
@@ -28,40 +35,46 @@ func inspectErrorCauses(err error) errorCauseInspection {
 	}
 
 	inspection := errorCauseInspection{leaves: make([]string, 0, 1)}
-	stack := []error{err}
+	stack := []pendingErrorCause{{err: err}}
 	visited := 0
 	for len(stack) > 0 {
+		if len(inspection.leaves) >= maxErrorCauseLeaves {
+			inspection.truncated = true
+			break
+		}
 		current := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
-		if current == nil {
+		if current.err == nil {
 			continue
 		}
 		if visited >= maxErrorCauseNodes {
 			inspection.truncated = true
-			inspection.appendLeaf(current)
-			continue
+			break
 		}
 		visited++
+		if current.depth >= maxErrorCauseDepth {
+			inspection.truncated = true
+			inspection.appendLeaf(current.err)
+			continue
+		}
 
-		children, unwrapped, truncated := unwrapErrorChildren(current)
+		children, unwrapped, truncated := unwrapErrorChildren(current.err)
 		if truncated {
 			inspection.truncated = true
 		}
 		if !unwrapped || len(children) == 0 {
-			inspection.appendLeaf(current)
+			inspection.appendLeaf(current.err)
 			continue
 		}
 		inspection.unwrapped = true
 		if len(children) > 1 {
 			inspection.branching = true
 		}
-		available := maxErrorCauseNodes - len(stack)
-		if available < len(children) {
-			children = children[:available]
-			inspection.truncated = true
-		}
 		for i := len(children) - 1; i >= 0; i-- {
-			stack = append(stack, children[i])
+			stack = append(stack, pendingErrorCause{
+				err:   children[i],
+				depth: current.depth + 1,
+			})
 		}
 	}
 	return inspection
@@ -91,7 +104,7 @@ func unwrapErrorChildren(err error) (children []error, unwrapped bool, truncated
 	if multi, ok := err.(interface{ Unwrap() []error }); ok {
 		for _, child := range multi.Unwrap() {
 			if child != nil {
-				if len(children) == maxErrorCauseNodes {
+				if len(children) == maxErrorCauseChildren {
 					return children, true, true
 				}
 				children = append(children, child)

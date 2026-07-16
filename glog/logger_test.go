@@ -231,6 +231,32 @@ func TestErrorLoggingTraversesUncomparableAndMultiErrorCauses(t *testing.T) {
 		assert.Contains(t, output, `"error_causes_truncated":true`)
 	})
 
+	t.Run("wide branch preserves nested leaf order", func(t *testing.T) {
+		children := make([]error, maxErrorCauseChildren)
+		children[0] = errors.Join(errors.New("nested-a"), errors.New("nested-b"))
+		for i := 1; i < len(children); i++ {
+			children[i] = fmt.Errorf("sibling-%02d", i)
+		}
+
+		inspection := inspectErrorCauses(errors.Join(children...))
+		expected := []string{"nested-a", "nested-b"}
+		for i := 1; len(expected) < maxErrorCauseLeaves; i++ {
+			expected = append(expected, fmt.Sprintf("sibling-%02d", i))
+		}
+		assert.Equal(t, expected, inspection.leaves)
+		assert.True(t, inspection.truncated)
+	})
+
+	t.Run("cyclic branch does not flatten a wrapped sibling", func(t *testing.T) {
+		inspection := inspectErrorCauses(errors.Join(
+			cyclicError{},
+			fmt.Errorf("wrapped sibling: %w", errors.New("healthy leaf")),
+		))
+
+		assert.Equal(t, []string{"cyclic error", "healthy leaf"}, inspection.leaves)
+		assert.True(t, inspection.truncated)
+	})
+
 	t.Run("leaf count is bounded", func(t *testing.T) {
 		causes := make([]error, maxErrorCauseLeaves+2)
 		for i := range causes {
