@@ -5,10 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -670,6 +673,284 @@ func TestWithHandlerWrapper(t *testing.T) {
 	assert.Equal(t, "*slog.TextHandler", wrappedType)
 	assert.NotEmpty(t, buf.String())
 	assert.Contains(t, buf.String(), "wrapped handler test")
+}
+
+type capturedLogRecord struct {
+	record slog.Record
+	attrs  []slog.Attr
+	groups []string
+}
+
+type recordCaptureSink struct {
+	mu      sync.Mutex
+	records []capturedLogRecord
+}
+
+type recordCaptureHandler struct {
+	sink   *recordCaptureSink
+	next   slog.Handler
+	attrs  []slog.Attr
+	groups []string
+}
+
+func (h *recordCaptureHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.next == nil || h.next.Enabled(ctx, level)
+}
+
+func (h *recordCaptureHandler) Handle(ctx context.Context, record slog.Record) error {
+	h.sink.mu.Lock()
+	h.sink.records = append(h.sink.records, capturedLogRecord{
+		record: record.Clone(),
+		attrs:  append([]slog.Attr(nil), h.attrs...),
+		groups: append([]string(nil), h.groups...),
+	})
+	h.sink.mu.Unlock()
+	if h.next == nil {
+		return nil
+	}
+	return h.next.Handle(ctx, record)
+}
+
+func (h *recordCaptureHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	clone := *h
+	clone.attrs = append(append([]slog.Attr(nil), h.attrs...), attrs...)
+	if h.next != nil {
+		clone.next = h.next.WithAttrs(attrs)
+	}
+	return &clone
+}
+
+func (h *recordCaptureHandler) WithGroup(name string) slog.Handler {
+	clone := *h
+	clone.groups = append(append([]string(nil), h.groups...), name)
+	if h.next != nil {
+		clone.next = h.next.WithGroup(name)
+	}
+	return &clone
+}
+
+func (s *recordCaptureSink) snapshot(t *testing.T) []capturedLogRecord {
+	t.Helper()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]capturedLogRecord, len(s.records))
+	copy(out, s.records)
+	return out
+}
+
+func recordAttrs(record slog.Record) map[string]any {
+	attrs := map[string]any{}
+	record.Attrs(func(attr slog.Attr) bool {
+		attrs[attr.Key] = attr.Value.Any()
+		return true
+	})
+	return attrs
+}
+
+func recordFunction(record slog.Record) string {
+	if record.PC == 0 {
+		return ""
+	}
+	frame, _ := runtime.CallersFrames([]uintptr{record.PC}).Next()
+	return frame.Function
+}
+
+//go:noinline
+func logInfoThroughAdapter(logger *BaseLogger) {
+	logger.Info("through adapter")
+}
+
+//go:noinline
+func logErrorThroughAdapter(logger *BaseLogger, err error) {
+	logger.Error("adapter failed", err)
+}
+
+func TestWithCallerSkipNormalizationAndPropagation(t *testing.T) {
+	var buf bytes.Buffer
+
+	negative := newTestLogger(&buf, WithCallerSkip(-2))
+	assert.Equal(t, 0, negative.callerSkip)
+
+	logger := newTestLogger(&buf, WithCallerSkip(maxAdditionalCallerSkip+100))
+	assert.Equal(t, maxAdditionalCallerSkip, logger.callerSkip)
+
+	logger = newTestLogger(&buf, WithCallerSkip(2))
+	assert.Equal(t, 2, logger.WithContext(context.Background()).(*BaseLogger).callerSkip)
+	assert.Equal(t, 2, logger.GetLogger("child").(*BaseLogger).callerSkip)
+	assert.Equal(t, 2, logger.With("component", "worker").callerSkip)
+	assert.Equal(t, 2, logger.WithFields(map[string]any{"request_id": "req-1"}).(*BaseLogger).callerSkip)
+}
+
+func TestWithCallerSkipResolvesAdapterCallerAndStack(t *testing.T) {
+	sink := &recordCaptureSink{}
+	logger := NewLogger(
+		WithCallerSkip(1),
+		WithHandlerWrapper(func(next slog.Handler) slog.Handler {
+			return &recordCaptureHandler{sink: sink, next: next}
+		}),
+	)
+
+	logInfoThroughAdapter(logger)
+	logErrorThroughAdapter(logger, fmt.Errorf("wrapped: %w", errors.New("root")))
+
+	records := sink.snapshot(t)
+	require.Len(t, records, 2)
+	assert.Contains(t, recordFunction(records[0].record), "TestWithCallerSkipResolvesAdapterCallerAndStack")
+	assert.Contains(t, recordFunction(records[1].record), "TestWithCallerSkipResolvesAdapterCallerAndStack")
+
+	attrs := recordAttrs(records[1].record)
+	require.Contains(t, attrs, "stack")
+	stack, ok := attrs["stack"].(string)
+	require.True(t, ok)
+	assert.Contains(t, stack, "TestWithCallerSkipResolvesAdapterCallerAndStack")
+	assert.NotContains(t, stack, "logErrorThroughAdapter")
+}
+
+func TestDefaultCallerRemainsApplicationCallSite(t *testing.T) {
+	sink := &recordCaptureSink{}
+	logger := NewLogger(
+		WithFatalBehavior(FatalBehaviorLogOnly),
+		WithHandlerWrapper(func(next slog.Handler) slog.Handler {
+			return &recordCaptureHandler{sink: sink, next: next}
+		}),
+	)
+
+	logger.Info("direct info")
+	logger.Error("direct error", errors.New("boom"))
+	logger.Fatal("direct fatal", errors.New("fatal boom"))
+
+	records := sink.snapshot(t)
+	require.Len(t, records, 3)
+	for _, captured := range records {
+		assert.Contains(t, recordFunction(captured.record), "TestDefaultCallerRemainsApplicationCallSite")
+	}
+	assert.Contains(t, recordAttrs(records[1].record)["stack"], "TestDefaultCallerRemainsApplicationCallSite")
+	assert.Contains(t, recordAttrs(records[2].record)["stack"], "TestDefaultCallerRemainsApplicationCallSite")
+}
+
+func TestHandlerWrapperObservesCanonicalEnrichedRecordOnce(t *testing.T) {
+	var buf bytes.Buffer
+	sink := &recordCaptureSink{}
+	logger := NewLogger(
+		WithLoggerTypeJSON(),
+		WithWriter(&buf),
+		WithHandlerWrapper(func(next slog.Handler) slog.Handler {
+			return &recordCaptureHandler{
+				sink:  sink,
+				next:  next,
+				attrs: []slog.Attr{slog.String("delegate", fmt.Sprintf("%T", next))},
+			}
+		}),
+	)
+
+	logger.GetLogger("api").(*BaseLogger).
+		With("request_id", "req-1").
+		Error("request failed", fmt.Errorf("outer: %w", errors.New("root cause")))
+
+	records := sink.snapshot(t)
+	require.Len(t, records, 1)
+	require.NotZero(t, records[0].record.PC)
+	attrs := recordAttrs(records[0].record)
+	assert.Equal(t, "root cause", attrs["root_error"])
+	assert.EqualError(t, attrs["error"].(error), "outer: root cause")
+	assert.NotEmpty(t, attrs["stack"])
+	assert.Equal(t, 1, strings.Count(buf.String(), `"msg":"request failed"`))
+
+	boundAttrs := map[string]any{}
+	for _, attr := range records[0].attrs {
+		boundAttrs[attr.Key] = attr.Value.Any()
+	}
+	assert.Equal(t, "api", boundAttrs["logger"])
+	assert.Equal(t, "req-1", boundAttrs["request_id"])
+}
+
+func TestHandlerWrapperPreservesAttrsAndGroups(t *testing.T) {
+	sink := &recordCaptureSink{}
+	logger := NewLogger(
+		WithWriter(io.Discard),
+		WithHandlerWrapper(func(next slog.Handler) slog.Handler {
+			return &recordCaptureHandler{sink: sink, next: next}
+		}),
+	)
+
+	handler := logger.logger.Handler().
+		WithGroup("request").
+		WithAttrs([]slog.Attr{slog.String("request_id", "req-1")})
+	record := slog.NewRecord(time.Now(), slog.LevelInfo, "grouped", 0)
+	require.NoError(t, handler.Handle(context.Background(), record))
+
+	records := sink.snapshot(t)
+	require.Len(t, records, 1)
+	assert.Equal(t, []string{"request"}, records[0].groups)
+	require.Len(t, records[0].attrs, 1)
+	assert.Equal(t, "request_id", records[0].attrs[0].Key)
+	assert.Equal(t, "req-1", records[0].attrs[0].Value.String())
+}
+
+func TestCallerSkipAndHandlerCaptureAreConcurrentSafe(t *testing.T) {
+	sink := &recordCaptureSink{}
+	logger := NewLogger(
+		WithCallerSkip(1),
+		WithWriter(io.Discard),
+		WithHandlerWrapper(func(next slog.Handler) slog.Handler {
+			return &recordCaptureHandler{sink: sink, next: next}
+		}),
+	)
+
+	const callers = 24
+	var wg sync.WaitGroup
+	wg.Add(callers)
+	for i := range callers {
+		go func() {
+			defer wg.Done()
+			logInfoThroughAdapter(logger.With("worker", i))
+		}()
+	}
+	wg.Wait()
+
+	assert.Len(t, sink.snapshot(t), callers)
+}
+
+type orderedHandler struct {
+	next  slog.Handler
+	name  string
+	order *[]string
+}
+
+func (h *orderedHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.next.Enabled(ctx, level)
+}
+
+func (h *orderedHandler) Handle(ctx context.Context, record slog.Record) error {
+	*h.order = append(*h.order, h.name)
+	return h.next.Handle(ctx, record)
+}
+
+func (h *orderedHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &orderedHandler{next: h.next.WithAttrs(attrs), name: h.name, order: h.order}
+}
+
+func (h *orderedHandler) WithGroup(name string) slog.Handler {
+	return &orderedHandler{next: h.next.WithGroup(name), name: h.name, order: h.order}
+}
+
+func TestWithHandlerWrapperCompositionOrder(t *testing.T) {
+	var buf bytes.Buffer
+	order := []string{}
+	logger := NewLogger(
+		WithWriter(&buf),
+		WithHandlerWrapper(func(next slog.Handler) slog.Handler {
+			return &orderedHandler{next: next, name: "first", order: &order}
+		}),
+		WithHandlerWrapper(func(next slog.Handler) slog.Handler {
+			return &orderedHandler{next: next, name: "second", order: &order}
+		}),
+	)
+
+	logger.With("request_id", "req-1").Info("composed")
+
+	assert.Equal(t, []string{"second", "first"}, order)
+	assert.Contains(t, buf.String(), `"request_id":"req-1"`)
 }
 
 func TestWithWriter(t *testing.T) {
