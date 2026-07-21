@@ -20,6 +20,16 @@ func WithAddSource(add bool) Option {
 	}
 }
 
+// WithCallerSkip adds known adapter frames to the caller depth used for
+// slog.Record.PC and error stack capture. Values below zero are treated as
+// zero and excessive values are bounded. Use this only for stable wrapper
+// layers owned by the application; it is not a general stack-hiding feature.
+func WithCallerSkip(skip int) Option {
+	return func(l *BaseLogger) {
+		l.callerSkip = normalizeAdditionalCallerSkip(skip)
+	}
+}
+
 func WithName(name string) Option {
 	return func(bl *BaseLogger) {
 		bl.name = name
@@ -57,9 +67,22 @@ func WithLoggerTypeJSON() Option {
 }
 
 // WithHandlerWrapper wraps the base slog handler before focus/name handlers.
+// Multiple options compose in declaration order: the first wrapper is closest
+// to the base handler and each later wrapper becomes the new outer wrapper.
 func WithHandlerWrapper(wrapper func(slog.Handler) slog.Handler) Option {
 	return func(bl *BaseLogger) {
-		bl.handlerWrapper = wrapper
+		if wrapper == nil {
+			return
+		}
+		if bl.handlerWrapper == nil {
+			bl.handlerWrapper = wrapper
+			return
+		}
+
+		inner := bl.handlerWrapper
+		bl.handlerWrapper = func(handler slog.Handler) slog.Handler {
+			return wrapper(inner(handler))
+		}
 	}
 }
 
