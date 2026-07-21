@@ -4,12 +4,22 @@
 
 ## <!-- 16 -->➕ Add
 
-- Add `WithCallerSkip` for application-owned logger adapters while preserving caller PCs and error stack origins.
-- Compose repeated `WithHandlerWrapper` options deterministically, with later wrappers outside earlier wrappers.
+- Caller skip ([1718803](https://github.com/goliatone/go-logger/commit/17188030a78167cc305e85de5961560cd8739fd1))  - (goliatone)
+
+## <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Update docs ([7ee8be9](https://github.com/goliatone/go-logger/commit/7ee8be9109b2e4605a344f24af81727fcc5ae334))  - (goliatone)
+- Update tests ([1ce93a6](https://github.com/goliatone/go-logger/commit/1ce93a6167a6431844a07a7c5cbc356ec33c7cd0))  - (goliatone)
+
+# [0.8.4](https://github.com/goliatone/go-logger/compare/v0.8.3...v0.8.4) - (2026-07-16)
 
 ## <!-- 1 -->🐛 Bug Fixes
 
 - Max error depth ([1ae98f4](https://github.com/goliatone/go-logger/commit/1ae98f425329f320ac923ac86259ee959a9b9dd5))  - (goliatone)
+
+## <!-- 12 -->🔖 Releases
+
+- V0.8.4 ([ac79be3](https://github.com/goliatone/go-logger/commit/ac79be34f33f10c0c47e0ce01127a93a2b12178d))  - (goliatone)
 
 # [0.8.3](https://github.com/goliatone/go-logger/compare/v0.8.2...v0.8.3) - (2026-07-15)
 
