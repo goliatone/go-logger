@@ -56,6 +56,7 @@ log := glog.NewLogger(
     glog.WithLevel(glog.Debug),          // Set log level
     glog.WithLoggerTypePretty(),         // Use colored console output
     glog.WithAddSource(true),            // Include source file info
+    glog.WithCallerSkip(1),              // Account for one application adapter frame
     glog.WithContext(ctx),               // Attach context
     glog.WithRichErrorHandler(handler),  // Custom error attribute extraction
     glog.WithWriter(os.Stdout),          // Override output writer
@@ -73,6 +74,7 @@ log := glog.NewLogger(
 - `WithLoggerTypeConsole()` - Use plain text output format
 - `WithLoggerTypePretty()` - Use colored console output format
 - `WithAddSource(bool)` - Include source file and line number in logs
+- `WithCallerSkip(int)` - Add a bounded number of known application adapter frames to caller and error-stack resolution
 - `WithContext(context.Context)` - Attach a context to the logger
 - `WithRichErrorHandler(RichErrorHandler)` - Set custom error attribute extractor
 - `WithHandlerWrapper(func(slog.Handler) slog.Handler)` - Wrap the base slog handler before focus/name handling
@@ -316,6 +318,30 @@ log := glog.NewLogger(
     }),
 )
 ```
+
+Repeated `WithHandlerWrapper` options compose in declaration order. The first
+wrapper is closest to the base handler and later wrappers are outside it, so
+each wrapper observes the same enriched `slog.Record` exactly once.
+
+### Preserving Callers Through an Adapter
+
+When an application owns a logger adapter, declare its stable frame depth at
+construction so record source and error stacks begin at the application call
+site:
+
+```go
+base := glog.NewLogger(
+    glog.WithAddSource(true),
+    glog.WithCallerSkip(1),
+)
+
+adapter := NewApplicationLogger(base) // its methods add one stack frame
+adapter.Error("refresh failed", err)
+```
+
+Zero keeps the default behavior. Negative values are treated as zero and very
+large values are bounded. This option is intended for known adapter layers,
+not for filtering arbitrary stack frames.
 
 ### Custom Output Writer
 

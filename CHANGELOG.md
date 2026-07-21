@@ -2,6 +2,11 @@
 
 # [unreleased]
 
+## <!-- 16 -->➕ Add
+
+- Add `WithCallerSkip` for application-owned logger adapters while preserving caller PCs and error stack origins.
+- Compose repeated `WithHandlerWrapper` options deterministically, with later wrappers outside earlier wrappers.
+
 ## <!-- 1 -->🐛 Bug Fixes
 
 - Max error depth ([1ae98f4](https://github.com/goliatone/go-logger/commit/1ae98f425329f320ac923ac86259ee959a9b9dd5))  - (goliatone)
