@@ -37,6 +37,7 @@ type BaseLogger struct {
 
 	level      string
 	addSource  bool
+	callerSkip int
 	loggerType string
 	name       string
 
@@ -115,6 +116,7 @@ func (c *BaseLogger) WithContext(ctx context.Context) Logger {
 		focusMap:       c.focusMap,
 		level:          c.level,
 		addSource:      c.addSource,
+		callerSkip:     c.callerSkip,
 		loggerType:     c.loggerType,
 		stdout:         c.stdout,
 		handlerWrapper: c.handlerWrapper,
@@ -215,6 +217,7 @@ func (c *BaseLogger) GetLogger(name string) Logger {
 		name:           name,
 		level:          c.level,
 		addSource:      c.addSource,
+		callerSkip:     c.callerSkip,
 		loggerType:     c.loggerType,
 		exitFunc:       c.exitFunc,
 		fatalBehavior:  c.fatalBehavior,
@@ -277,11 +280,11 @@ func (c *BaseLogger) Warn(msg string, args ...any) {
 }
 
 func (c *BaseLogger) Error(msg string, args ...any) {
-	c.errorWithSkip(slog.LevelError, msg, defaultSkipFrames, args...)
+	c.errorWithSkip(slog.LevelError, msg, c.effectiveCallerSkip(defaultSkipFrames), args...)
 }
 
 func (c *BaseLogger) Fatal(msg string, args ...any) {
-	err := c.errorWithSkip(LevelFatal, msg, defaultSkipFrames, args...)
+	err := c.errorWithSkip(LevelFatal, msg, c.effectiveCallerSkip(defaultSkipFrames), args...)
 
 	switch c.fatalBehavior {
 	case FatalBehaviorLogOnly:
@@ -309,20 +312,34 @@ func (c *BaseLogger) Fatal(msg string, args ...any) {
 }
 
 const (
-	defaultSkipFrames = 4
+	defaultSkipFrames       = 4
+	maxAdditionalCallerSkip = 64
 )
+
+func normalizeAdditionalCallerSkip(skip int) int {
+	if skip < 0 {
+		return 0
+	}
+	if skip > maxAdditionalCallerSkip {
+		return maxAdditionalCallerSkip
+	}
+	return skip
+}
+
+func (c *BaseLogger) effectiveCallerSkip(base int) int {
+	if base < 0 {
+		base = 0
+	}
+	return base + normalizeAdditionalCallerSkip(c.callerSkip)
+}
 
 // log is the low-level logging method that all other log methods call.
 // It's responsible for creating the slog.Record with the correct caller PC
 // and passing it to the handler. This bypasses slog.Logger.Log to avoid
 // capturing the call site within this package
 func (c *BaseLogger) log(ctx context.Context, level slog.Level, msg string, args ...any) {
-	c.logWithSkip(ctx, level, msg, defaultSkipFrames, args...)
-}
-
-func (c *BaseLogger) logWithSkip(ctx context.Context, level slog.Level, msg string, skip int, args ...any) {
 	normalized := normalizeArgs(args)
-	c.logWithSkipNormalized(ctx, level, msg, skip, normalized)
+	c.logWithSkipNormalized(ctx, level, msg, c.effectiveCallerSkip(defaultSkipFrames), normalized)
 }
 
 func (c *BaseLogger) logWithSkipNormalized(ctx context.Context, level slog.Level, msg string, skip int, args []any) {
