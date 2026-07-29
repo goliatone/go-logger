@@ -237,7 +237,13 @@ func (v countingLogValuer) LogValue() slog.Value {
 	return slog.StringValue(v.value)
 }
 
-func TestGlobalFieldCollisionScanDoesNotResolveValuesEarly(t *testing.T) {
+type logValuerFunc func() slog.Value
+
+func (f logValuerFunc) LogValue() slog.Value {
+	return f()
+}
+
+func TestGlobalFieldCollisionScanResolvesValuesOnce(t *testing.T) {
 	var buf bytes.Buffer
 	calls := 0
 	logger := newTestLogger(
@@ -254,6 +260,177 @@ func TestGlobalFieldCollisionScanDoesNotResolveValuesEarly(t *testing.T) {
 	record := decodeJSONRecords(t, buf.String())[0]
 	assert.Equal(t, "local-service", record["service"])
 	assert.Equal(t, 1, calls)
+}
+
+func TestInlineLogValuerOverridesGlobalFieldWithoutDuplicateKeys(t *testing.T) {
+	var buf bytes.Buffer
+	calls := 0
+	logger := newTestLogger(
+		&buf,
+		WithLoggerTypeJSON(),
+		WithGlobalFields(map[string]any{"service": "global-service"}),
+	)
+
+	logger.Info("inline log valuer", slog.Any("", logValuerFunc(func() slog.Value {
+		calls++
+		return slog.GroupValue(slog.String("service", "local-service"))
+	})))
+
+	line := strings.TrimSpace(buf.String())
+	record := decodeJSONRecords(t, line)[0]
+	assert.Equal(t, "local-service", record["service"])
+	assert.Equal(t, 1, strings.Count(line, `"service":`))
+	assert.Equal(t, 1, calls)
+}
+
+func TestBoundInlineLogValuerOverridesGlobalFieldWithoutDuplicateKeys(t *testing.T) {
+	var buf bytes.Buffer
+	calls := 0
+	logger := newTestLogger(
+		&buf,
+		WithLoggerTypeJSON(),
+		WithGlobalFields(map[string]any{"service": "global-service"}),
+	).With(slog.Any("", logValuerFunc(func() slog.Value {
+		calls++
+		return slog.GroupValue(slog.String("service", "local-service"))
+	})))
+
+	logger.Info("bound inline log valuer")
+
+	line := strings.TrimSpace(buf.String())
+	record := decodeJSONRecords(t, line)[0]
+	assert.Equal(t, "local-service", record["service"])
+	assert.Equal(t, 1, strings.Count(line, `"service":`))
+	assert.Equal(t, 1, calls)
+}
+
+func TestWithFieldsInlineLogValuerOverridesGlobalFieldWithoutDuplicateKeys(t *testing.T) {
+	var buf bytes.Buffer
+	calls := 0
+	logger := newTestLogger(
+		&buf,
+		WithLoggerTypeJSON(),
+		WithGlobalFields(map[string]any{"service": "global-service"}),
+	).WithFields(map[string]any{
+		"": logValuerFunc(func() slog.Value {
+			calls++
+			return slog.GroupValue(slog.String("service", "local-service"))
+		}),
+	})
+
+	logger.Info("with fields inline log valuer")
+
+	line := strings.TrimSpace(buf.String())
+	record := decodeJSONRecords(t, line)[0]
+	assert.Equal(t, "local-service", record["service"])
+	assert.Equal(t, 1, strings.Count(line, `"service":`))
+	assert.Equal(t, 1, calls)
+}
+
+func TestNestedInlineLogValuersOverrideGlobalField(t *testing.T) {
+	var buf bytes.Buffer
+	outerCalls := 0
+	innerCalls := 0
+	logger := newTestLogger(
+		&buf,
+		WithLoggerTypeJSON(),
+		WithGlobalFields(map[string]any{"service": "global-service"}),
+	)
+
+	logger.Info("nested inline log valuers", slog.Any("", logValuerFunc(func() slog.Value {
+		outerCalls++
+		return slog.GroupValue(slog.Any("", logValuerFunc(func() slog.Value {
+			innerCalls++
+			return slog.GroupValue(slog.String("service", "local-service"))
+		})))
+	})))
+
+	line := strings.TrimSpace(buf.String())
+	record := decodeJSONRecords(t, line)[0]
+	assert.Equal(t, "local-service", record["service"])
+	assert.Equal(t, 1, strings.Count(line, `"service":`))
+	assert.Equal(t, 1, outerCalls)
+	assert.Equal(t, 1, innerCalls)
+}
+
+func TestLogValuerResolvingToEmptyGroupDoesNotSuppressGlobalField(t *testing.T) {
+	var buf bytes.Buffer
+	calls := 0
+	logger := newTestLogger(
+		&buf,
+		WithLoggerTypeJSON(),
+		WithGlobalFields(map[string]any{"service": "global-service"}),
+	)
+
+	logger.Info("empty log valuer", slog.Any("service", logValuerFunc(func() slog.Value {
+		calls++
+		return slog.GroupValue()
+	})))
+
+	line := strings.TrimSpace(buf.String())
+	record := decodeJSONRecords(t, line)[0]
+	assert.Equal(t, "global-service", record["service"])
+	assert.Equal(t, 1, strings.Count(line, `"service":`))
+	assert.Equal(t, 1, calls)
+}
+
+func TestLogValuerResolvingToZeroAttrIsIgnored(t *testing.T) {
+	var buf bytes.Buffer
+	calls := 0
+	logger := newTestLogger(
+		&buf,
+		WithLoggerTypeJSON(),
+		WithGlobalFields(map[string]any{"service": "global-service"}),
+	)
+
+	logger.Info("zero attr", slog.Any("", logValuerFunc(func() slog.Value {
+		calls++
+		return slog.Value{}
+	})))
+
+	line := strings.TrimSpace(buf.String())
+	record := decodeJSONRecords(t, line)[0]
+	assert.Equal(t, "global-service", record["service"])
+	assert.NotContains(t, record, "")
+	assert.NotContains(t, line, `"":`)
+	assert.Equal(t, 1, calls)
+}
+
+func TestResolvedCollisionRecordPreservesMetadataForWrappedHandler(t *testing.T) {
+	sink := &recordCaptureSink{}
+	calls := 0
+	logger := NewLogger(
+		WithWriter(io.Discard),
+		WithGlobalFields(map[string]any{"service": "global-service"}),
+		WithHandlerWrapper(func(next slog.Handler) slog.Handler {
+			return &recordCaptureHandler{sink: sink, next: next}
+		}),
+	)
+
+	timestamp := time.Date(2026, time.July, 28, 10, 30, 0, 0, time.UTC)
+	record := slog.NewRecord(timestamp, slog.LevelWarn, "resolved collision", 42)
+	record.AddAttrs(slog.Any("", logValuerFunc(func() slog.Value {
+		calls++
+		return slog.GroupValue(slog.String("service", "local-service"))
+	})))
+	require.NoError(t, logger.logger.Handler().Handle(context.Background(), record))
+
+	records := sink.snapshot(t)
+	require.Len(t, records, 1)
+	captured := records[0].record
+	assert.Equal(t, timestamp, captured.Time)
+	assert.Equal(t, slog.LevelWarn, captured.Level)
+	assert.Equal(t, "resolved collision", captured.Message)
+	assert.Equal(t, uintptr(42), captured.PC)
+	assert.Equal(t, 1, calls)
+	require.Equal(t, 1, captured.NumAttrs())
+	captured.Attrs(func(attr slog.Attr) bool {
+		assert.Empty(t, attr.Key)
+		require.Equal(t, slog.KindGroup, attr.Value.Kind())
+		require.Len(t, attr.Value.Group(), 1)
+		assert.Equal(t, slog.String("service", "local-service"), attr.Value.Group()[0])
+		return true
+	})
 }
 
 func TestGlobalFieldsAreIndependentAcrossRoots(t *testing.T) {
