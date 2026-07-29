@@ -2,6 +2,16 @@
 
 # [unreleased]
 
+## <!-- 1 -->🐛 Bug Fixes
+
+- Normalize attributes ([603a57f](https://github.com/goliatone/go-logger/commit/603a57f8b69339c74987c51cf78dd7d5a8edfac7))  - (goliatone)
+
+# [0.10.0](https://github.com/goliatone/go-logger/compare/v0.9.0...v0.10.0) - (2026-07-29)
+
+## <!-- 12 -->🔖 Releases
+
+- V0.10.0 ([09736b0](https://github.com/goliatone/go-logger/commit/09736b0b7ffe31618b084563501cce5a189ec76b))  - (goliatone)
+
 ## <!-- 16 -->➕ Add
 
 - Normalize fields ([5c16df2](https://github.com/goliatone/go-logger/commit/5c16df24c9ebcd1b746642021a628239f4472852))  - (goliatone)
