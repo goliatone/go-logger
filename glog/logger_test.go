@@ -612,7 +612,7 @@ func TestWithLevelPropagatesToChildren(t *testing.T) {
 	root := newTestLogger(&buf, WithLevel(Info), WithLoggerTypeJSON())
 	child := root.GetLogger("child").(*BaseLogger)
 
-	root.WithLevel(Debug)
+	root.WithLevel(" debug ")
 
 	assert.Equal(t, Debug, root.level)
 	assert.Equal(t, Debug, child.level)
@@ -623,10 +623,28 @@ func TestWithLoggerTypePropagatesToChildren(t *testing.T) {
 	root := newTestLogger(&buf, WithLoggerTypeJSON())
 	child := root.GetLogger("child").(*BaseLogger)
 
-	root.WithLoggerType(LoggerTypePretty)
+	root.WithLoggerType(" PRETTY ")
 
 	assert.Equal(t, LoggerTypePretty, root.loggerType)
 	assert.Equal(t, LoggerTypePretty, child.loggerType)
+}
+
+func TestConfigurationOptionsNormalizeValues(t *testing.T) {
+	var buf bytes.Buffer
+	logger := newTestLogger(
+		&buf,
+		WithLevel(" warning "),
+		WithLoggerType(" TEXT "),
+	)
+
+	assert.Equal(t, Warn, logger.level)
+	assert.Equal(t, LoggerTypeConsole, logger.loggerType)
+
+	logger.Info("suppressed")
+	logger.Warn("included")
+
+	assert.NotContains(t, buf.String(), "suppressed")
+	assert.Contains(t, buf.String(), "included")
 }
 
 type spyHandler struct {

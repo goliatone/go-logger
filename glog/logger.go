@@ -32,6 +32,7 @@ type BaseLogger struct {
 	focusMap       map[string]bool
 	stdout         io.Writer
 	handlerWrapper func(slog.Handler) slog.Handler
+	globalFields   *globalFieldState
 	exitFunc       func(int)
 	fatalBehavior  FatalBehavior
 
@@ -67,6 +68,7 @@ func NewLogger(options ...Option) *BaseLogger {
 		loggers:        map[string]*BaseLogger{},
 		focusMap:       map[string]bool{},
 		stdout:         os.Stdout,
+		globalFields:   newGlobalFieldState(nil),
 		richErrHandler: defaultErrHandler,
 		fatalBehavior:  FatalBehaviorExit,
 	}
@@ -92,6 +94,7 @@ func (c *BaseLogger) WithLevel(level string) *BaseLogger {
 	root.mu.Lock()
 	defer root.mu.Unlock()
 
+	level = NormalizeLevel(level)
 	c.level = level
 	c.configureLogger()
 
@@ -120,6 +123,7 @@ func (c *BaseLogger) WithContext(ctx context.Context) Logger {
 		loggerType:     c.loggerType,
 		stdout:         c.stdout,
 		handlerWrapper: c.handlerWrapper,
+		globalFields:   c.globalFields,
 		richErrHandler: c.richErrHandler,
 		exitFunc:       c.exitFunc,
 		fatalBehavior:  c.fatalBehavior,
@@ -133,6 +137,7 @@ func (c *BaseLogger) WithLoggerType(loggerType string) Logger {
 	root.mu.Lock()
 	defer root.mu.Unlock()
 
+	loggerType = NormalizeLoggerType(loggerType)
 	c.loggerType = loggerType
 	c.configureLogger()
 
@@ -150,6 +155,19 @@ func (c *BaseLogger) getRoot() *BaseLogger {
 		return c
 	}
 	return c.root
+}
+
+// SetGlobalFields atomically replaces the root-owned fields included with
+// every record in this logger tree. The supplied map is copied. A nil or empty
+// map clears the current fields.
+func (c *BaseLogger) SetGlobalFields(fields map[string]any) *BaseLogger {
+	if c == nil {
+		return nil
+	}
+
+	root := c.getRoot()
+	root.globalFields.replace(fields)
+	return c
 }
 
 func (c *BaseLogger) Focus(names ...string) {
@@ -210,6 +228,7 @@ func (c *BaseLogger) GetLogger(name string) Logger {
 		ctx:            c.ctx,
 		stdout:         c.stdout,
 		handlerWrapper: c.handlerWrapper,
+		globalFields:   c.globalFields,
 		richErrHandler: c.richErrHandler,
 		loggers:        make(map[string]*BaseLogger),
 		focusMap:       make(map[string]bool),
@@ -477,6 +496,7 @@ func (c *BaseLogger) configureLogger() {
 		handler = c.handlerWrapper(handler)
 	}
 
+	handler = newGlobalFieldsHandler(handler, c.globalFields)
 	handler = NewFocusFilterHandler(handler, c)
 
 	if c.name != "" {
@@ -527,18 +547,18 @@ func (h *FocusFilterHandler) WithGroup(name string) slog.Handler {
 }
 
 func getLevel(l string) slog.Level {
-	switch strings.ToUpper(l) {
-	case "ERROR":
+	switch NormalizeLevel(l) {
+	case Error:
 		return slog.LevelError
-	case "WARN":
+	case Warn:
 		return slog.LevelWarn
-	case "INFO":
+	case Info:
 		return slog.LevelInfo
-	case "DEBUG":
+	case Debug:
 		return slog.LevelDebug
-	case "TRACE":
+	case Trace:
 		return LevelTrace
-	case "FATAL":
+	case Fatal:
 		return LevelFatal
 	default:
 		return slog.LevelInfo
