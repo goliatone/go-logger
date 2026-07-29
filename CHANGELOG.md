@@ -4,8 +4,21 @@
 
 ## <!-- 16 -->➕ Add
 
-- Runtime configuration normalizers with `warning` and `text` aliases
-- Atomically replaceable global fields shared across each root logger tree
+- Normalize fields ([5c16df2](https://github.com/goliatone/go-logger/commit/5c16df24c9ebcd1b746642021a628239f4472852))  - (goliatone)
+- Global fields support ([4549c4a](https://github.com/goliatone/go-logger/commit/4549c4a5552ec8ed7a81a03ac47ec5914094ff31))  - (goliatone)
+
+## <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Update tests ([28a6c72](https://github.com/goliatone/go-logger/commit/28a6c7290e6e1844ae8bd75039796890cd70f128))  - (goliatone)
+
+# [0.9.0](https://github.com/goliatone/go-logger/compare/v0.8.4...v0.9.0) - (2026-07-21)
+
+## <!-- 12 -->🔖 Releases
+
+- V0.9.0 ([e589f3b](https://github.com/goliatone/go-logger/commit/e589f3be290f3ad3c740ab8fd101faa8f26b2fb7))  - (goliatone)
+
+## <!-- 16 -->➕ Add
+
 - Caller skip ([1718803](https://github.com/goliatone/go-logger/commit/17188030a78167cc305e85de5961560cd8739fd1))  - (goliatone)
 
 ## <!-- 7 -->⚙️ Miscellaneous Tasks
