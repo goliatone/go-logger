@@ -8,9 +8,21 @@ import (
 
 type Option func(*BaseLogger)
 
+// WithGlobalFields configures the initial root-owned fields included with
+// every record in the logger tree. The supplied map is copied.
+func WithGlobalFields(fields map[string]any) Option {
+	return func(l *BaseLogger) {
+		if l.globalFields == nil {
+			l.globalFields = newGlobalFieldState(fields)
+			return
+		}
+		l.globalFields.replace(fields)
+	}
+}
+
 func WithLevel(level string) Option {
 	return func(l *BaseLogger) {
-		l.level = level
+		l.level = NormalizeLevel(level)
 	}
 }
 
@@ -44,7 +56,7 @@ func WithContext(ctx context.Context) Option {
 
 func WithLoggerType(loggerType string) Option {
 	return func(bl *BaseLogger) {
-		bl.loggerType = loggerType
+		bl.loggerType = NormalizeLoggerType(loggerType)
 	}
 }
 
