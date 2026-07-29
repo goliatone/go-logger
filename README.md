@@ -10,6 +10,7 @@ A flexible, structured logging library for Go built on top of Go's standard `slo
 - **Named Loggers**: Create and manage multiple named logger instances
 - **Focus Mode**: Filter logs to show only specific logger names during debugging
 - **Contextual Logging**: Attach context and structured attributes to log entries
+- **Global Fields**: Atomically replace root-owned fields across a logger tree
 - **Error Enrichment**: Automatic extraction of error metadata including stack traces
 - **Thread-Safe**: Safe for concurrent use across goroutines
 - **Customizable**: Flexible configuration through functional options
@@ -55,6 +56,7 @@ log := glog.NewLogger(
     glog.WithName("myapp"),              // Set logger name
     glog.WithLevel(glog.Debug),          // Set log level
     glog.WithLoggerTypePretty(),         // Use colored console output
+    glog.WithGlobalFields(map[string]any{"service": "myapp"}),
     glog.WithAddSource(true),            // Include source file info
     glog.WithCallerSkip(1),              // Account for one application adapter frame
     glog.WithContext(ctx),               // Attach context
@@ -73,6 +75,7 @@ log := glog.NewLogger(
 - `WithLoggerTypeJSON()` - Use JSON output format
 - `WithLoggerTypeConsole()` - Use plain text output format
 - `WithLoggerTypePretty()` - Use colored console output format
+- `WithGlobalFields(map[string]any)` - Set initial root-owned fields for the logger tree
 - `WithAddSource(bool)` - Include source file and line number in logs
 - `WithCallerSkip(int)` - Add a bounded number of known application adapter frames to caller and error-stack resolution
 - `WithContext(context.Context)` - Attach a context to the logger
@@ -208,6 +211,39 @@ if fl, ok := log.(glog.FieldsLogger); ok {
 
 log.Info("Request received")
 ```
+
+### Runtime Configuration and Global Fields
+
+Use the public normalizers when applying human-edited configuration. Matching
+is case-insensitive and ignores surrounding whitespace. `warning` aliases
+`WARN`, `text` aliases console output, unsupported levels fall back to `INFO`,
+and unsupported output types fall back to JSON.
+
+```go
+log := glog.NewLogger(
+    glog.WithLevel(glog.NormalizeLevel(cfg.Logging.Level)),
+    glog.WithLoggerType(glog.NormalizeLoggerType(cfg.Logging.Format)),
+    glog.WithGlobalFields(map[string]any{
+        "service": "orders",
+    }),
+)
+
+// Existing and future named or derived loggers observe the replacement.
+log.SetGlobalFields(map[string]any{
+    "service":     "orders",
+    "environment": cfg.Environment,
+    "app_version": cfg.Version,
+})
+```
+
+`SetGlobalFields` atomically replaces the complete root-owned field set; it
+does not merge. Passing `nil` or an empty map clears the fields. The input map
+is copied, and independent root loggers do not share fields. Explicit
+attributes supplied through `With`, `WithFields`, or a log call override a
+global field with the same key.
+
+Use global fields for deployment identity or other logger-tree defaults. Use
+`With` or `WithFields` for request- and operation-specific context.
 
 ## Error Handling
 

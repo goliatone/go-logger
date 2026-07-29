@@ -4,6 +4,8 @@
 
 ## <!-- 16 -->➕ Add
 
+- Runtime configuration normalizers with `warning` and `text` aliases
+- Atomically replaceable global fields shared across each root logger tree
 - Caller skip ([1718803](https://github.com/goliatone/go-logger/commit/17188030a78167cc305e85de5961560cd8739fd1))  - (goliatone)
 
 ## <!-- 7 -->⚙️ Miscellaneous Tasks
